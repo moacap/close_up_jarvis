@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type React from 'react';
+import { useTranslation } from 'react-i18next';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -122,6 +123,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ onSettingsChange }: SettingsPanelProps) {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [saved, setSaved] = useState(false);
 
@@ -135,10 +137,10 @@ export function SettingsPanel({ onSettingsChange }: SettingsPanelProps) {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.heading}>Settings</h2>
+      <h2 style={styles.heading}>{t('desktop.settingsPanel.title')}</h2>
 
       <div style={styles.fieldGroup}>
-        <label style={styles.label}>API URL</label>
+        <label style={styles.label}>{t('desktop.settingsPanel.apiUrlLabel')}</label>
         <input
           style={styles.input}
           type="text"
@@ -151,7 +153,7 @@ export function SettingsPanel({ onSettingsChange }: SettingsPanelProps) {
       </div>
 
       <div style={styles.fieldGroup}>
-        <label style={styles.label}>Auto-refresh interval</label>
+        <label style={styles.label}>{t('desktop.settingsPanel.refreshIntervalLabel')}</label>
         <select
           style={styles.select}
           value={settings.refreshInterval}
@@ -162,17 +164,17 @@ export function SettingsPanel({ onSettingsChange }: SettingsPanelProps) {
             }))
           }
         >
-          <option value={1}>1 second</option>
-          <option value={2}>2 seconds</option>
-          <option value={5}>5 seconds</option>
-          <option value={10}>10 seconds</option>
-          <option value={30}>30 seconds</option>
-          <option value={60}>60 seconds</option>
+          <option value={1}>{t('desktop.settingsPanel.secondsOption', { count: 1 })}</option>
+          <option value={2}>{t('desktop.settingsPanel.secondsOption', { count: 2 })}</option>
+          <option value={5}>{t('desktop.settingsPanel.secondsOption', { count: 5 })}</option>
+          <option value={10}>{t('desktop.settingsPanel.secondsOption', { count: 10 })}</option>
+          <option value={30}>{t('desktop.settingsPanel.secondsOption', { count: 30 })}</option>
+          <option value={60}>{t('desktop.settingsPanel.secondsOption', { count: 60 })}</option>
         </select>
       </div>
 
       <div style={styles.fieldGroup}>
-        <label style={styles.label}>Theme</label>
+        <label style={styles.label}>{t('desktop.settingsPanel.themeLabel')}</label>
         <div style={styles.toggleRow}>
           <button
             type="button"
@@ -182,7 +184,7 @@ export function SettingsPanel({ onSettingsChange }: SettingsPanelProps) {
             }}
             onClick={() => setSettings((s) => ({ ...s, theme: 'dark' }))}
           >
-            Dark
+            {t('desktop.settingsPanel.themeDark')}
           </button>
           <button
             type="button"
@@ -192,12 +194,12 @@ export function SettingsPanel({ onSettingsChange }: SettingsPanelProps) {
             }}
             onClick={() => setSettings((s) => ({ ...s, theme: 'light' }))}
           >
-            Light
+            {t('desktop.settingsPanel.themeLight')}
           </button>
         </div>
       </div>
 
-      {saved && <div style={styles.savedNotice}>Settings saved</div>}
+      {saved && <div style={styles.savedNotice}>{t('desktop.settingsPanel.savedNotice')}</div>}
     </div>
   );
 }

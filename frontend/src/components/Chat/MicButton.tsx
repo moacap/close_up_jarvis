@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SpeechState } from '../../hooks/useSpeech';
 
 interface MicButtonProps {
@@ -9,20 +10,21 @@ interface MicButtonProps {
 }
 
 export function MicButton({ state, onClick, disabled, reason }: MicButtonProps) {
+  const { t } = useTranslation();
   const [showTooltip, setShowTooltip] = useState(false);
 
   const tooltipText =
     reason === 'not-enabled'
-      ? 'Enable in Settings'
+      ? t('chat.micButton.enableInSettings')
       : reason === 'no-backend'
-        ? 'Speech backend not configured'
+        ? t('chat.micButton.noBackend')
         : reason === 'streaming'
-          ? 'Wait for response'
+          ? t('chat.micButton.waitForResponse')
           : state === 'recording'
-            ? 'Stop recording'
+            ? t('chat.micButton.stopRecording')
             : state === 'transcribing'
-              ? 'Transcribing...'
-              : 'Voice input';
+              ? t('chat.micButton.transcribing')
+              : t('chat.micButton.voiceInput');
 
   const isInactive = disabled || state === 'transcribing';
 

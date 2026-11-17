@@ -1,4 +1,4 @@
-"""Detect how OpenJarvis was installed so we can show the right upgrade
+"""Detect how Close-UP was installed so we can show the right upgrade
 command (and run the right upgrade command for ``jarvis self-update``).
 
 Three install paths are supported today:
@@ -29,7 +29,7 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class InstallInfo:
-    """How OpenJarvis was installed."""
+    """How Close-UP was installed."""
 
     kind: str  # "pypi" | "uv-tool" | "editable-git" | "unknown"
     upgrade_command: str

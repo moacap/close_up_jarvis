@@ -229,7 +229,7 @@ def serve(
         )
         sys.exit(1)
 
-    # Tool credentials saved through the browser UI live in the OpenJarvis
+    # Tool credentials saved through the browser UI live in the Close-UP
     # credential store. Restore them before engines and tools are constructed
     # so availability checks and tool instances see the same environment.
     inject_credentials()
@@ -803,7 +803,7 @@ def serve(
     )
 
     console.print(
-        f"[green]Starting OpenJarvis API server[/green]\n"
+        f"[green]Starting Close-UP API server[/green]\n"
         f"  Engine: [cyan]{engine_name}[/cyan]\n"
         f"  Model:  [cyan]{model_name}[/cyan]\n"
         f"  Agent:  [cyan]{agent_key or 'none'}[/cyan]\n"

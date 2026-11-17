@@ -35,7 +35,7 @@ from openjarvis.telemetry.store import TelemetryStore
 logger = logging.getLogger(__name__)
 
 # Engines that run inference on this machine. Used by the image privacy guard
-# below: a screenshot is sensitive and OpenJarvis is local-first, so sending
+# below: a screenshot is sensitive and Close-UP is local-first, so sending
 # one to a non-local engine warrants a warning first. Module-level so it can be
 # asserted against directly -- an engine missing from here produces a false
 # "your image is leaving this machine" warning.

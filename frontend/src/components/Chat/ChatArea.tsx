@@ -1,5 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { MessageBubble } from './MessageBubble';
 import { InputArea } from './InputArea';
 import { StreamingDots } from './StreamingDots';
@@ -9,14 +11,15 @@ import { stripThinkTags } from '../../lib/message-text';
 import { Sparkles, PanelRightOpen, PanelRightClose, Database, MessageSquare, X } from 'lucide-react';
 import { listConnectors } from '../../lib/connectors-api';
 
-function getGreeting(): string {
+function getGreeting(t: TFunction): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return t('chat.chatArea.greetingMorning');
+  if (hour < 18) return t('chat.chatArea.greetingAfternoon');
+  return t('chat.chatArea.greetingEvening');
 }
 
 export function ChatArea() {
+  const { t } = useTranslation();
   const activeId = useAppStore((s) => s.activeId);
   const messages = useAppStore((s) => s.messages);
   const streamState = useAppStore((s) => s.streamState);
@@ -140,7 +143,11 @@ export function ChatArea() {
           onClick={toggleSystemPanel}
           className="p-1.5 rounded-md transition-colors cursor-pointer"
           style={{ color: 'var(--color-text-tertiary)' }}
-          title={`${systemPanelOpen ? 'Hide' : 'Show'} system panel (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+I)`}
+          title={
+            systemPanelOpen
+              ? t('chat.chatArea.hideSystemPanel', { shortcut: navigator.platform.includes('Mac') ? '⌘' : 'Ctrl' })
+              : t('chat.chatArea.showSystemPanel', { shortcut: navigator.platform.includes('Mac') ? '⌘' : 'Ctrl' })
+          }
         >
           <PanelIcon size={16} />
         </button>
@@ -157,14 +164,14 @@ export function ChatArea() {
         >
           <Database size={16} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
           <span style={{ color: 'var(--color-text-secondary)', flex: 1 }}>
-            Connect your data sources (Gmail, iMessage, Slack, etc.) to get personalized answers.
+            {t('chat.chatArea.connectDataSourcesBanner')}
           </span>
           <button
             onClick={() => navigate('/data-sources')}
             className="px-3 py-1 rounded text-xs font-medium cursor-pointer"
             style={{ background: 'var(--color-accent)', color: 'var(--color-on-accent)', border: 'none' }}
           >
-            Connect
+            {t('chat.chatArea.connect')}
           </button>
           <button
             onClick={() => setBannerDismissed(true)}
@@ -189,10 +196,10 @@ export function ChatArea() {
               <Sparkles size={24} />
             </div>
             <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
-              {getGreeting()}
+              {getGreeting(t)}
             </h2>
             <p className="text-sm text-center max-w-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-              Ask anything. Your AI runs locally — private, fast, and always available.
+              {t('chat.chatArea.welcomeMessage')}
             </p>
 
             {/* Quick action hints */}
@@ -209,7 +216,7 @@ export function ChatArea() {
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--color-border)')}
               >
                 <Database size={14} style={{ color: 'var(--color-accent)' }} />
-                Connect Data Sources
+                {t('chat.chatArea.connectDataSourcesButton')}
               </button>
               <button
                 onClick={() => { navigate('/data-sources'); setTimeout(() => window.dispatchEvent(new CustomEvent('switch-tab', { detail: 'messaging' })), 100); }}
@@ -223,7 +230,7 @@ export function ChatArea() {
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--color-border)')}
               >
                 <MessageSquare size={14} style={{ color: 'var(--color-accent)' }} />
-                Set Up Messaging Channels
+                {t('chat.chatArea.setupMessagingButton')}
               </button>
             </div>
           </div>

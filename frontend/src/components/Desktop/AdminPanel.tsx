@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type React from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from 'react-i18next';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -215,6 +216,7 @@ function formatUptime(seconds: number): string {
 // ---------------------------------------------------------------------------
 
 export function AdminPanel({ apiUrl }: { apiUrl: string }) {
+  const { t } = useTranslation();
   const [healthy, setHealthy] = useState<boolean | null>(null);
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [agents, setAgents] = useState<AgentInfo[]>([]);
@@ -304,7 +306,7 @@ export function AdminPanel({ apiUrl }: { apiUrl: string }) {
   if (loading) {
     return (
       <div style={styles.container}>
-        <div style={styles.loading}>Loading system status...</div>
+        <div style={styles.loading}>{t('desktop.adminPanel.loading')}</div>
       </div>
     );
   }
@@ -317,18 +319,22 @@ export function AdminPanel({ apiUrl }: { apiUrl: string }) {
         : styles.healthDotUnhealthy;
 
   const healthLabel =
-    healthy === null ? 'Unknown' : healthy ? 'Healthy' : 'Unhealthy';
+    healthy === null
+      ? t('desktop.adminPanel.healthUnknown')
+      : healthy
+        ? t('desktop.adminPanel.healthHealthy')
+        : t('desktop.adminPanel.healthUnhealthy');
 
   return (
     <div style={styles.container}>
-      <div style={styles.header}>Admin Panel</div>
+      <div style={styles.header}>{t('desktop.adminPanel.title')}</div>
 
       {error && <div style={styles.error}>{error}</div>}
 
       <div style={styles.grid}>
         {/* Health & Engine */}
         <div style={styles.card}>
-          <div style={styles.cardTitle}>System Health</div>
+          <div style={styles.cardTitle}>{t('desktop.adminPanel.systemHealth')}</div>
           <div style={{ ...styles.row, marginBottom: 8 }}>
             <div style={styles.healthStatus}>
               <span style={{ ...styles.healthDot, ...healthDotStyle }} />
@@ -336,36 +342,36 @@ export function AdminPanel({ apiUrl }: { apiUrl: string }) {
             </div>
           </div>
           <div style={styles.row}>
-            <span style={styles.label}>Engine</span>
-            <span style={styles.value}>{serverInfo?.engine || 'N/A'}</span>
+            <span style={styles.label}>{t('desktop.adminPanel.engine')}</span>
+            <span style={styles.value}>{serverInfo?.engine || t('desktop.adminPanel.notAvailable')}</span>
           </div>
           <div style={styles.row}>
-            <span style={styles.label}>Model</span>
-            <span style={styles.value}>{serverInfo?.model || 'N/A'}</span>
+            <span style={styles.label}>{t('desktop.adminPanel.model')}</span>
+            <span style={styles.value}>{serverInfo?.model || t('desktop.adminPanel.notAvailable')}</span>
           </div>
           <div style={styles.row}>
-            <span style={styles.label}>Agent</span>
-            <span style={styles.value}>{serverInfo?.agent || 'N/A'}</span>
+            <span style={styles.label}>{t('desktop.adminPanel.agent')}</span>
+            <span style={styles.value}>{serverInfo?.agent || t('desktop.adminPanel.notAvailable')}</span>
           </div>
         </div>
 
         {/* System Info */}
         <div style={styles.card}>
-          <div style={styles.cardTitle}>System Info</div>
+          <div style={styles.cardTitle}>{t('desktop.adminPanel.systemInfo')}</div>
           <div style={styles.row}>
-            <span style={styles.label}>Version</span>
+            <span style={styles.label}>{t('desktop.adminPanel.version')}</span>
             <span style={styles.value}>{serverInfo?.version || '0.1.0'}</span>
           </div>
           <div style={styles.row}>
-            <span style={styles.label}>Uptime</span>
+            <span style={styles.label}>{t('desktop.adminPanel.uptime')}</span>
             <span style={styles.value}>
               {serverInfo?.uptime_seconds !== undefined
                 ? formatUptime(serverInfo.uptime_seconds)
-                : 'N/A'}
+                : t('desktop.adminPanel.notAvailable')}
             </span>
           </div>
           <div style={styles.row}>
-            <span style={styles.label}>API URL</span>
+            <span style={styles.label}>{t('desktop.adminPanel.apiUrl')}</span>
             <span style={styles.value}>{apiUrl}</span>
           </div>
 
@@ -380,7 +386,7 @@ export function AdminPanel({ apiUrl }: { apiUrl: string }) {
               onClick={handleStart}
               disabled={commandRunning}
             >
-              Start Server
+              {t('desktop.adminPanel.startServer')}
             </button>
             <button
               style={{
@@ -391,7 +397,7 @@ export function AdminPanel({ apiUrl }: { apiUrl: string }) {
               onClick={handleStop}
               disabled={commandRunning}
             >
-              Stop Server
+              {t('desktop.adminPanel.stopServer')}
             </button>
           </div>
 
@@ -404,14 +410,14 @@ export function AdminPanel({ apiUrl }: { apiUrl: string }) {
       {/* Agent Registry */}
       {agents.length > 0 && (
         <div style={styles.card}>
-          <div style={styles.cardTitle}>Agent Registry ({agents.length})</div>
+          <div style={styles.cardTitle}>{t('desktop.adminPanel.agentRegistryCount', { count: agents.length })}</div>
           <table style={styles.agentTable}>
             <thead>
               <tr>
-                <th style={styles.th}>Name</th>
-                <th style={styles.th}>Key</th>
-                <th style={styles.th}>Tools</th>
-                <th style={styles.th}>Description</th>
+                <th style={styles.th}>{t('desktop.adminPanel.name')}</th>
+                <th style={styles.th}>{t('desktop.adminPanel.key')}</th>
+                <th style={styles.th}>{t('desktop.adminPanel.toolsColumn')}</th>
+                <th style={styles.th}>{t('desktop.adminPanel.description')}</th>
               </tr>
             </thead>
             <tbody>
@@ -428,7 +434,7 @@ export function AdminPanel({ apiUrl }: { apiUrl: string }) {
                         ...(agent.accepts_tools ? styles.badgeTrue : styles.badgeFalse),
                       }}
                     >
-                      {agent.accepts_tools ? 'Yes' : 'No'}
+                      {agent.accepts_tools ? t('desktop.adminPanel.yes') : t('desktop.adminPanel.no')}
                     </span>
                   </td>
                   <td style={{ ...styles.td, color: '#a6adc8', fontSize: 12 }}>
@@ -443,9 +449,9 @@ export function AdminPanel({ apiUrl }: { apiUrl: string }) {
 
       {agents.length === 0 && !loading && (
         <div style={styles.card}>
-          <div style={styles.cardTitle}>Agent Registry</div>
+          <div style={styles.cardTitle}>{t('desktop.adminPanel.agentRegistry')}</div>
           <div style={{ color: '#a6adc8', fontSize: 13, padding: '8px 0' }}>
-            No agents registered or server not reachable.
+            {t('desktop.adminPanel.noAgentsRegistered')}
           </div>
         </div>
       )}

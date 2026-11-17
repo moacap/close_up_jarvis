@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { ResearchSearchTrace, TimeRange } from '../../types';
 
 interface Props {
@@ -19,23 +21,23 @@ function fmtDate(iso: string): string | null {
   return SHORT_DATE.format(d);
 }
 
-function formatTimeRange(tr: TimeRange | string | undefined): string | null {
+function formatTimeRange(tr: TimeRange | string | undefined, t: TFunction): string | null {
   if (!tr) return null;
   if (typeof tr === 'string') return tr.trim() || null;
   const start = tr.start ? fmtDate(tr.start) : null;
   const end = tr.end ? fmtDate(tr.end) : null;
   if (start && end) return start === end ? start : `${start} – ${end}`;
-  if (start) return `after ${start}`;
-  if (end) return `before ${end}`;
+  if (start) return t('chat.researchTimeline.afterDate', { date: start });
+  if (end) return t('chat.researchTimeline.beforeDate', { date: end });
   return null;
 }
 
-function summarizeTraces(traces: ResearchSearchTrace[]): string {
+function summarizeTraces(traces: ResearchSearchTrace[], t: TFunction): string {
   const n = traces.length;
-  const hits = traces.reduce((s, t) => s + (t.numHits ?? 0), 0);
-  const searchLabel = `${n} ${n === 1 ? 'search' : 'searches'}`;
+  const hits = traces.reduce((s, tr) => s + (tr.numHits ?? 0), 0);
+  const searchLabel = t('chat.researchTimeline.searchesCount', { count: n });
   if (hits === 0) return searchLabel;
-  return `${searchLabel} · ${hits} ${hits === 1 ? 'result' : 'results'}`;
+  return `${searchLabel} · ${t('chat.researchTimeline.resultsCount', { count: hits })}`;
 }
 
 function StatusLine({ text }: { text: string }) {
@@ -58,12 +60,13 @@ function TimelineStep({
   trace: ResearchSearchTrace;
   isLive: boolean;
 }) {
+  const { t } = useTranslation();
   const pending = trace.status === 'pending';
   const active = pending && isLive;
   const meta: string[] = [];
-  if (trace.person) meta.push(`person: ${trace.person}`);
-  const formattedTime = formatTimeRange(trace.timeRange);
-  if (formattedTime) meta.push(`time: ${formattedTime}`);
+  if (trace.person) meta.push(t('chat.researchTimeline.personMeta', { person: trace.person }));
+  const formattedTime = formatTimeRange(trace.timeRange, t);
+  if (formattedTime) meta.push(t('chat.researchTimeline.timeMeta', { time: formattedTime }));
 
   return (
     <div className="relative pl-4">
@@ -87,7 +90,7 @@ function TimelineStep({
           color: active ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
         }}
       >
-        Search {index}
+        {t('chat.researchTimeline.searchStep', { index })}
       </div>
 
       <div
@@ -121,7 +124,7 @@ function TimelineStep({
           className="text-[11px] mt-1"
           style={{ color: 'var(--color-text-tertiary)' }}
         >
-          {trace.numHits} {trace.numHits === 1 ? 'result' : 'results'}
+          {t('chat.researchTimeline.resultsCount', { count: trace.numHits })}
         </div>
       ) : null}
 
@@ -138,9 +141,10 @@ function TimelineStep({
 }
 
 export function ResearchTimeline({ traces, isLive, hasContent }: Props) {
+  const { t } = useTranslation();
   const showAnalyzing = isLive && traces.length === 0 && !hasContent;
   const allComplete =
-    traces.length > 0 && traces.every((t) => t.status === 'complete');
+    traces.length > 0 && traces.every((tr) => tr.status === 'complete');
   const showSynthesizing = isLive && allComplete && !hasContent;
 
   // Auto-collapse the timeline the moment synthesis text begins streaming.
@@ -171,13 +175,13 @@ export function ResearchTimeline({ traces, isLive, hasContent }: Props) {
               boxShadow: '0 0 0 3px var(--color-accent-subtle)',
             }}
           />
-          <StatusLine text="Analyzing query" />
+          <StatusLine text={t('chat.researchTimeline.analyzingQuery')} />
         </div>
       </div>
     );
   }
 
-  const summary = summarizeTraces(traces);
+  const summary = summarizeTraces(traces, t);
   const Chevron = expanded ? ChevronUp : ChevronDown;
 
   return (
@@ -192,7 +196,7 @@ export function ResearchTimeline({ traces, isLive, hasContent }: Props) {
           border: 'none',
           padding: 0,
         }}
-        title={expanded ? 'Collapse search trace' : 'Expand search trace'}
+        title={expanded ? t('chat.researchTimeline.collapseSearchTrace') : t('chat.researchTimeline.expandSearchTrace')}
       >
         <span>{summary}</span>
         <Chevron size={12} />
@@ -206,11 +210,11 @@ export function ResearchTimeline({ traces, isLive, hasContent }: Props) {
             style={{ background: 'var(--color-border)' }}
           />
           <div className="flex flex-col gap-3">
-            {traces.map((t, i) => (
+            {traces.map((tr, i) => (
               <TimelineStep
-                key={t.id}
+                key={tr.id}
                 index={i + 1}
-                trace={t}
+                trace={tr}
                 isLive={isLive}
               />
             ))}
@@ -225,7 +229,7 @@ export function ResearchTimeline({ traces, isLive, hasContent }: Props) {
                     boxShadow: '0 0 0 3px var(--color-accent-subtle)',
                   }}
                 />
-                <StatusLine text="Synthesizing findings" />
+                <StatusLine text={t('chat.researchTimeline.synthesizingFindings')} />
               </div>
             )}
           </div>

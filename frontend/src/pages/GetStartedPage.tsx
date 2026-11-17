@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import {
   Sparkles,
   Download,
@@ -103,6 +104,7 @@ function detectPlatform(): string {
 }
 
 function CodeBlock({ code }: { code: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -121,7 +123,7 @@ function CodeBlock({ code }: { code: string }) {
         onClick={handleCopy}
         className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
         style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text-tertiary)' }}
-        title="Copy"
+        title={t('pages.getStarted.copy')}
       >
         {copied ? <Check size={14} /> : <Copy size={14} />}
       </button>
@@ -183,6 +185,7 @@ function Section({
 // Hosted view: visitor on a deployed website
 // ---------------------------------------------------------------------------
 function HostedView() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [healthy, setHealthy] = useState<boolean | null>(null);
 
@@ -199,21 +202,20 @@ function HostedView() {
         <Sparkles size={32} />
       </div>
       <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
-        OpenJarvis
+        {t('pages.getStarted.appName')}
       </h1>
       <p
         className="text-sm mb-6 leading-relaxed max-w-md mx-auto"
         style={{ color: 'var(--color-text-secondary)' }}
       >
-        Private AI that runs on your hardware. Chat, tools, agents, and
-        energy profiling &mdash; no cloud required.
+        {t('pages.getStarted.tagline')}
       </p>
 
       {healthy === true && (
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-accent)' }}>
             <CheckCircle2 size={16} />
-            <span>Server is running</span>
+            <span>{t('pages.getStarted.serverRunning')}</span>
           </div>
           <button
             onClick={() => navigate('/')}
@@ -223,7 +225,7 @@ function HostedView() {
             onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
           >
             <MessageSquare size={18} />
-            Start Chatting
+            {t('pages.getStarted.startChatting')}
             <ArrowRight size={16} />
           </button>
         </div>
@@ -234,13 +236,13 @@ function HostedView() {
           className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm"
           style={{ background: 'color-mix(in srgb, var(--color-error) 10%, transparent)', color: 'var(--color-error)' }}
         >
-          Server is not responding. The backend may be starting up.
+          {t('pages.getStarted.serverNotResponding')}
         </div>
       )}
 
       {healthy === null && (
         <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-          Checking server...
+          {t('pages.getStarted.checkingServer')}
         </div>
       )}
     </div>
@@ -251,6 +253,7 @@ function HostedView() {
 // Desktop view: running in the Tauri app
 // ---------------------------------------------------------------------------
 function DesktopView() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -263,14 +266,13 @@ function DesktopView() {
           <Sparkles size={32} />
         </div>
         <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
-          OpenJarvis Desktop
+          {t('pages.getStarted.desktopHeading')}
         </h1>
         <p
           className="text-sm mb-4 leading-relaxed max-w-md mx-auto"
           style={{ color: 'var(--color-text-secondary)' }}
         >
-          Your local AI is ready. Everything runs on your device &mdash; no
-          data leaves your machine.
+          {t('pages.getStarted.desktopTagline')}
         </p>
         <span
           className="inline-block text-[11px] font-mono px-2.5 py-1 rounded-full"
@@ -286,10 +288,10 @@ function DesktopView() {
       >
         <div className="flex items-center justify-center gap-2 mb-2" style={{ color: 'var(--color-accent)' }}>
           <CheckCircle2 size={18} />
-          <span className="text-sm font-medium">All systems running</span>
+          <span className="text-sm font-medium">{t('pages.getStarted.allSystemsRunning')}</span>
         </div>
         <p className="text-xs mb-5" style={{ color: 'var(--color-text-tertiary)' }}>
-          Ollama inference engine, API server, and AI model are active.
+          {t('pages.getStarted.systemsActiveDescription')}
         </p>
         <button
           onClick={() => navigate('/')}
@@ -299,17 +301,17 @@ function DesktopView() {
           onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
         >
           <MessageSquare size={18} />
-          Start Chatting
+          {t('pages.getStarted.startChatting')}
           <ArrowRight size={16} />
         </button>
       </div>
 
       <div className="flex flex-col gap-3 mb-8">
-        <Section icon={Cpu} title="Keyboard Shortcuts" defaultOpen>
+        <Section icon={Cpu} title={t('pages.getStarted.keyboardShortcutsTitle')} defaultOpen>
           <div className="grid grid-cols-2 gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            <div><kbd className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-tertiary)' }}>Cmd+K</kbd> Model picker</div>
-            <div><kbd className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-tertiary)' }}>Cmd+I</kbd> System panel</div>
-            <div><kbd className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-tertiary)' }}>Cmd+N</kbd> New chat</div>
+            <div><kbd className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-tertiary)' }}>Cmd+K</kbd> {t('pages.getStarted.shortcutModelPicker')}</div>
+            <div><kbd className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-tertiary)' }}>Cmd+I</kbd> {t('pages.getStarted.shortcutSystemPanel')}</div>
+            <div><kbd className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-tertiary)' }}>Cmd+N</kbd> {t('pages.getStarted.shortcutNewChat')}</div>
           </div>
         </Section>
       </div>
@@ -321,6 +323,7 @@ function DesktopView() {
 // Self-hosted view: running on localhost (manual setup)
 // ---------------------------------------------------------------------------
 function SelfHostedView() {
+  const { t } = useTranslation();
   const detectedId = useMemo(() => detectPlatform(), []);
   const primary = PLATFORMS.find((p) => p.id === detectedId) || PLATFORMS[0];
   const others = PLATFORMS.filter((p) => p.id !== primary.id);
@@ -336,14 +339,13 @@ function SelfHostedView() {
           <Sparkles size={32} />
         </div>
         <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
-          OpenJarvis
+          {t('pages.getStarted.appName')}
         </h1>
         <p
           className="text-sm mb-4 leading-relaxed max-w-md mx-auto"
           style={{ color: 'var(--color-text-secondary)' }}
         >
-          Private AI that runs on your hardware. Chat, tools, agents, and
-          energy profiling &mdash; no cloud required.
+          {t('pages.getStarted.tagline')}
         </p>
         <span
           className="inline-block text-[11px] font-mono px-2.5 py-1 rounded-full"
@@ -362,11 +364,11 @@ function SelfHostedView() {
           <div className="flex items-center justify-center gap-2 mb-1">
             <Monitor size={18} style={{ color: 'var(--color-text-secondary)' }} />
             <h2 className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>
-              Desktop App
+              {t('pages.getStarted.desktopApp')}
             </h2>
           </div>
           <p className="text-xs mb-6" style={{ color: 'var(--color-text-tertiary)' }}>
-            One-click install. Bundles Ollama and the server &mdash; no setup required.
+            {t('pages.getStarted.desktopAppDescription')}
           </p>
 
           <a
@@ -377,12 +379,12 @@ function SelfHostedView() {
             onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
           >
             <Download size={18} />
-            Download for {primary.label}
+            {t('pages.getStarted.downloadFor', { platform: t(`pages.getStarted.platformName.${primary.id}`) })}
           </a>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
             <span className="text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>
-              Or
+              {t('pages.getStarted.or')}
             </span>
             {others.map((p) => (
               <a
@@ -393,7 +395,7 @@ function SelfHostedView() {
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-accent)')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-text-secondary)')}
               >
-                {p.shortLabel}
+                {t(`pages.getStarted.platformName.${p.id}`)}
               </a>
             ))}
           </div>
@@ -402,36 +404,34 @@ function SelfHostedView() {
 
       {/* CLI + Browser sections */}
       <div className="flex flex-col gap-3 mb-10">
-        <Section icon={Terminal} title="Command Line (macOS / Linux)" defaultOpen>
+        <Section icon={Terminal} title={t('pages.getStarted.cliSectionTitle')} defaultOpen>
           <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            Clone and install (Python 3.10+ required):
+            {t('pages.getStarted.cloneInstallInstruction')}
           </p>
           <CodeBlock code={"git clone https://github.com/open-jarvis/OpenJarvis.git\ncd OpenJarvis\nuv sync"} />
           <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-            Then get started:
+            {t('pages.getStarted.getStartedInstruction')}
           </p>
           <CodeBlock code={"jarvis init\njarvis doctor\njarvis chat"} />
         </Section>
 
-        <Section icon={Globe} title="Browser App (Self-Hosted)">
+        <Section icon={Globe} title={t('pages.getStarted.browserSectionTitle')}>
           <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            Launch the API server to get the full UI in your browser:
+            {t('pages.getStarted.launchApiInstruction')}
           </p>
           <CodeBlock code={"git clone https://github.com/open-jarvis/OpenJarvis.git\ncd OpenJarvis\nuv sync --extra desktop\njarvis serve --port 8000"} />
           <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-            The chat, dashboard, energy profiling, and cost comparison all run
-            locally on your machine.
+            {t('pages.getStarted.browserFeaturesDescription')}
           </p>
         </Section>
 
-        <Section icon={Globe} title="Docker (Cloud / VPS Deploy)">
+        <Section icon={Globe} title={t('pages.getStarted.dockerSectionTitle')}>
           <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            Deploy with Docker Compose for a zero-setup hosted instance:
+            {t('pages.getStarted.dockerDeployInstruction')}
           </p>
           <CodeBlock code={"git clone https://github.com/open-jarvis/OpenJarvis.git\ncd OpenJarvis\ndocker compose -f deploy/docker/docker-compose.yml up -d"} />
           <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-            This starts both the API server and Ollama. The web UI is bundled and
-            served automatically at port 8000.
+            {t('pages.getStarted.dockerDescription')}
           </p>
         </Section>
       </div>
@@ -444,21 +444,21 @@ function SelfHostedView() {
         <div className="flex items-center gap-2 mb-3">
           <Cpu size={14} style={{ color: 'var(--color-text-tertiary)' }} />
           <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-tertiary)' }}>
-            System Requirements
+            {t('pages.getStarted.systemRequirementsTitle')}
           </h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           <div>
-            <div className="font-medium mb-0.5" style={{ color: 'var(--color-text)' }}>Desktop App</div>
-            No prerequisites &mdash; everything is bundled
+            <div className="font-medium mb-0.5" style={{ color: 'var(--color-text)' }}>{t('pages.getStarted.desktopApp')}</div>
+            {t('pages.getStarted.desktopAppRequirement')}
           </div>
           <div>
-            <div className="font-medium mb-0.5" style={{ color: 'var(--color-text)' }}>CLI / Self-Hosted</div>
-            Python 3.10+ and an inference engine (Ollama recommended)
+            <div className="font-medium mb-0.5" style={{ color: 'var(--color-text)' }}>{t('pages.getStarted.cliSelfHostedTitle')}</div>
+            {t('pages.getStarted.cliSelfHostedRequirement')}
           </div>
           <div>
-            <div className="font-medium mb-0.5" style={{ color: 'var(--color-text)' }}>Memory</div>
-            8 GB+ RAM recommended
+            <div className="font-medium mb-0.5" style={{ color: 'var(--color-text)' }}>{t('pages.getStarted.memoryTitle')}</div>
+            {t('pages.getStarted.memoryRequirement')}
           </div>
         </div>
       </div>

@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class DashboardApp:
-    """Terminal dashboard for OpenJarvis monitoring.
+    """Terminal dashboard for Close-UP monitoring.
 
     Panels:
     - System status (engine health, model, memory backend)
@@ -55,9 +55,9 @@ class DashboardApp:
             )
 
         class JarvisDashboard(App):
-            """OpenJarvis TUI Dashboard."""
+            """Close-UP TUI Dashboard."""
 
-            TITLE = "OpenJarvis Dashboard"
+            TITLE = "Close-UP Dashboard"
             CSS_PATH = None
             CSS = """
             Screen {

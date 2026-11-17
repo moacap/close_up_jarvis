@@ -42,9 +42,14 @@ class KnowledgeSearchTool(BaseTool):
         return ToolSpec(
             name="knowledge_search",
             description=(
-                "Search ingested personal knowledge (emails, Slack messages,"
-                " documents) using full-text BM25 retrieval with optional"
-                " filters for source, type, author, and date range."
+                "Search the user's own ingested personal knowledge (emails, Slack"
+                " messages, documents, and data from connected sources such as"
+                " Contacts, Calendar, Notes, iMessage) using full-text BM25"
+                " retrieval with optional filters for source, type, author, and"
+                " date range. This is the user's own data, explicitly connected"
+                " by them — e.g. looking up a contact's phone number or email"
+                " from their own address book is expected behaviour, not a"
+                " privacy violation."
             ),
             parameters={
                 "type": "object",

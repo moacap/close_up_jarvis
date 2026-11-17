@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type React from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from 'react-i18next';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -347,6 +348,7 @@ function stepColor(stepType: string): string {
 // ---------------------------------------------------------------------------
 
 function StepDataView({ data }: { data: TraceStepData }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   const entries = Object.entries(data).filter(
@@ -376,7 +378,9 @@ function StepDataView({ data }: { data: TraceStepData }) {
           style={styles.expandButton}
           onClick={() => setExpanded(!expanded)}
         >
-          {expanded ? 'Show less' : `Show ${entries.length - 3} more fields...`}
+          {expanded
+            ? t('desktop.traceDebugger.showLess')
+            : t('desktop.traceDebugger.showMoreFields', { count: entries.length - 3 })}
         </button>
       )}
     </div>
@@ -417,6 +421,7 @@ function TimelineStep({ step }: TimelineStepProps) {
 // ---------------------------------------------------------------------------
 
 export function TraceDebugger({ apiUrl }: { apiUrl: string }) {
+  const { t } = useTranslation();
   const [traces, setTraces] = useState<TraceSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [traceDetail, setTraceDetail] = useState<TraceDetail | null>(null);
@@ -486,8 +491,8 @@ export function TraceDebugger({ apiUrl }: { apiUrl: string }) {
         <div style={styles.emptyState}>
           <div style={styles.emptyIcon}>&#x1F50D;</div>
           <div style={styles.emptyText}>
-            No traces available.<br />
-            Traces are recorded when queries are processed through the system.
+            {t('desktop.traceDebugger.emptyTitle')}<br />
+            {t('desktop.traceDebugger.emptyDescription')}
           </div>
         </div>
       </div>
@@ -499,8 +504,10 @@ export function TraceDebugger({ apiUrl }: { apiUrl: string }) {
       {/* Left panel - trace list */}
       <div style={styles.listPanel}>
         <div style={styles.listHeader}>
-          <h2 style={styles.listTitle}>Traces</h2>
-          <p style={styles.listSubtitle}>{traces.length} recent traces</p>
+          <h2 style={styles.listTitle}>{t('desktop.traceDebugger.traces')}</h2>
+          <p style={styles.listSubtitle}>
+            {t('desktop.traceDebugger.recentTraces', { count: traces.length })}
+          </p>
         </div>
 
         {error && <div style={styles.errorBanner}>{error}</div>}
@@ -531,7 +538,7 @@ export function TraceDebugger({ apiUrl }: { apiUrl: string }) {
                 <div style={styles.traceItemId}>{truncateId(trace.id)}</div>
                 <div style={styles.traceItemQuery}>{trace.query}</div>
                 <div style={styles.traceItemMeta}>
-                  <span>{trace.steps.length} steps</span>
+                  <span>{t('desktop.traceDebugger.stepsCount', { count: trace.steps.length })}</span>
                   <span>{formatTimestamp(trace.created_at)}</span>
                 </div>
               </div>
@@ -544,39 +551,39 @@ export function TraceDebugger({ apiUrl }: { apiUrl: string }) {
       <div style={styles.detailPanel}>
         {!selectedId && (
           <div style={styles.placeholder}>
-            Select a trace from the list to inspect its steps.
+            {t('desktop.traceDebugger.selectTracePrompt')}
           </div>
         )}
 
         {selectedId && detailLoading && (
-          <div style={styles.placeholder}>Loading trace...</div>
+          <div style={styles.placeholder}>{t('desktop.traceDebugger.loadingTrace')}</div>
         )}
 
         {selectedId && !detailLoading && traceDetail && (
           <>
             <div style={styles.detailHeader}>
               <h3 style={styles.detailTitle}>
-                Trace {truncateId(traceDetail.id)}
+                {t('desktop.traceDebugger.traceHeading', { id: truncateId(traceDetail.id) })}
               </h3>
               <p style={styles.detailQuery}>
-                Query: &quot;{traceDetail.query}&quot;
+                {t('desktop.traceDebugger.queryLabel', { query: traceDetail.query })}
               </p>
               <div style={styles.detailStats}>
                 <span>
-                  Steps:{' '}
+                  {t('desktop.traceDebugger.stepsLabel')}{' '}
                   <span style={styles.detailStatValue}>
                     {traceDetail.steps.length}
                   </span>
                 </span>
                 <span>
-                  Total:{' '}
+                  {t('desktop.traceDebugger.totalLabel')}{' '}
                   <span style={styles.detailStatValue}>
                     {formatDuration(totalDuration)}
                   </span>
                 </span>
                 {traceDetail.created_at && (
                   <span>
-                    Created:{' '}
+                    {t('desktop.traceDebugger.createdLabel')}{' '}
                     <span style={styles.detailStatValue}>
                       {formatTimestamp(traceDetail.created_at)}
                     </span>
@@ -588,7 +595,7 @@ export function TraceDebugger({ apiUrl }: { apiUrl: string }) {
             <div style={styles.detailScroll}>
               {traceDetail.steps.length === 0 ? (
                 <div style={styles.placeholder}>
-                  This trace contains no steps.
+                  {t('desktop.traceDebugger.noSteps')}
                 </div>
               ) : (
                 <div style={styles.timelineContainer}>

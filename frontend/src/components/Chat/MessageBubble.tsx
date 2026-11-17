@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import 'katex/dist/katex.min.css';
 import { Copy, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AudioPlayer } from './AudioPlayer';
 import { ToolCallCard } from './ToolCallCard';
 import { ResearchTimeline } from './ResearchTimeline';
@@ -46,6 +47,7 @@ const autoDirComponents = Object.fromEntries(
 );
 
 function CodeBlockPre({ children, ...props }: any) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const codeElement = Array.isArray(children) ? children[0] : children;
   const className = codeElement?.props?.className || '';
@@ -69,7 +71,7 @@ function CodeBlockPre({ children, ...props }: any) {
         className="flex items-center justify-between px-4 py-1.5 text-xs"
         style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}
       >
-        <span className="font-mono">{lang || 'code'}</span>
+        <span className="font-mono">{lang || t('chat.messageBubble.codeLabel')}</span>
         <button
           onClick={handleCopy}
           className="flex items-center gap-1 px-2 py-0.5 rounded transition-colors cursor-pointer"
@@ -78,7 +80,7 @@ function CodeBlockPre({ children, ...props }: any) {
           onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-text-tertiary)')}
         >
           {copied ? <Check size={12} /> : <Copy size={12} />}
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? t('chat.messageBubble.copied') : t('chat.messageBubble.copy')}
         </button>
       </div>
       <pre {...props} style={{ margin: 0, borderRadius: 0 }}>
@@ -89,6 +91,7 @@ function CodeBlockPre({ children, ...props }: any) {
 }
 
 function CopyMessageButton({ content }: { content: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -102,7 +105,7 @@ function CopyMessageButton({ content }: { content: string }) {
       onClick={handleCopy}
       className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
       style={{ color: 'var(--color-text-tertiary)' }}
-      title="Copy message"
+      title={t('chat.messageBubble.copyMessage')}
     >
       {copied ? <Check size={14} /> : <Copy size={14} />}
     </button>

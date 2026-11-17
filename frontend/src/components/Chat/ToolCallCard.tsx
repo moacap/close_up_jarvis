@@ -1,10 +1,21 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, CheckCircle2, XCircle, Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { ToolCallInfo } from '../../types';
 import { serializeToolCallArguments } from '../../lib/tool-call';
+import { getBase } from '../../lib/api';
 
 interface Props {
   toolCall: ToolCallInfo;
+}
+
+// Tools whose `metadata.path` points to a file the user would want to open —
+// gated by tool name so a stray "path" key on an unrelated tool's metadata
+// never turns into a bogus download link.
+const DOWNLOADABLE_TOOLS = new Set(['pdf_generate', 'file_write']);
+
+function downloadUrl(path: string): string {
+  return `${getBase()}/v1/files/download?path=${encodeURIComponent(path)}`;
 }
 
 const statusConfig = {
@@ -33,6 +44,7 @@ function previewArgs(raw: string): string {
 }
 
 export function ToolCallCard({ toolCall }: Props) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const config = statusConfig[toolCall.status];
   const StatusIcon = config.icon;
@@ -40,6 +52,13 @@ export function ToolCallCard({ toolCall }: Props) {
   // the TypeScript contract, so normalize again at the final render boundary.
   const argumentsText = serializeToolCallArguments(toolCall.arguments);
   const preview = previewArgs(argumentsText);
+  const filePath =
+    toolCall.status === 'success' &&
+    DOWNLOADABLE_TOOLS.has(toolCall.tool) &&
+    typeof toolCall.metadata?.path === 'string'
+      ? toolCall.metadata.path
+      : undefined;
+  const fileName = filePath ? filePath.split('/').pop() : undefined;
 
   return (
     <div
@@ -110,7 +129,7 @@ export function ToolCallCard({ toolCall }: Props) {
                   marginBottom: 3,
                 }}
               >
-                args
+                {t('chat.toolCallCard.argsLabel')}
               </div>
               <pre
                 className="p-1.5 rounded overflow-auto"
@@ -139,7 +158,7 @@ export function ToolCallCard({ toolCall }: Props) {
                   marginBottom: 3,
                 }}
               >
-                result
+                {t('chat.toolCallCard.resultLabel')}
               </div>
               <pre
                 className="p-1.5 rounded overflow-auto"
@@ -156,6 +175,18 @@ export function ToolCallCard({ toolCall }: Props) {
                 {toolCall.result}
               </pre>
             </div>
+          )}
+          {filePath && (
+            <a
+              href={downloadUrl(filePath)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1.5 flex items-center gap-1.5 w-fit"
+              style={{ color: 'var(--color-accent)', textDecoration: 'none' }}
+            >
+              <Download size={11} />
+              {t('chat.toolCallCard.downloadFile', { fileName })}
+            </a>
           )}
         </div>
       )}

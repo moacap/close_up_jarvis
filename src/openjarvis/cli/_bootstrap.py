@@ -135,7 +135,7 @@ def write_initial_config(
     )
 
     base_toml = (
-        f"# OpenJarvis configuration\n"
+        f"# Close-UP configuration\n"
         f"{hardware_line}{gpu_comment}\n"
         f"# Full reference config: jarvis init --full\n"
         f"\n"

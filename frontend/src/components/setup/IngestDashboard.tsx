@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { getSyncStatus } from '../../lib/connectors-api';
 import { SOURCE_CATALOG } from '../../types/connectors';
 import type { SyncStatus } from '../../types/connectors';
@@ -15,6 +16,7 @@ function ProgressRow({
   displayName: string;
   status: SyncStatus | null;
 }) {
+  const { t } = useTranslation();
   const isDone = status?.state === 'idle' && (status?.items_synced ?? 0) > 0;
   const pct =
     status && status.items_total > 0
@@ -49,14 +51,17 @@ function ProgressRow({
           )}
           <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
             {status?.state === 'syncing'
-              ? `${status.items_synced} / ${status.items_total}`
+              ? t('setup.ingestDashboard.progress.syncedOfTotal', {
+                  synced: status.items_synced,
+                  total: status.items_total,
+                })
               : isDone
-                ? `${status!.items_synced} items`
+                ? t('setup.ingestDashboard.progress.itemsCount', { count: status!.items_synced })
                 : status?.state === 'paused'
-                  ? 'Paused'
+                  ? t('setup.ingestDashboard.progress.paused')
                   : status?.state === 'error'
-                    ? 'Error'
-                    : 'Starting...'}
+                    ? t('setup.ingestDashboard.progress.error')
+                    : t('setup.ingestDashboard.progress.starting')}
           </span>
         </div>
       </div>
@@ -93,6 +98,7 @@ export function IngestDashboard({
   connectedIds: string[];
   onReady: () => void;
 }) {
+  const { t } = useTranslation();
   const [statuses, setStatuses] = useState<Record<string, SyncStatus | null>>(() =>
     Object.fromEntries(connectedIds.map((id) => [id, null])),
   );
@@ -132,12 +138,15 @@ export function IngestDashboard({
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-xl font-bold mb-1" style={{ color: 'var(--color-text)' }}>
-          {allDone ? 'Sync complete' : 'Syncing your data...'}
+          {allDone ? t('setup.ingestDashboard.header.syncComplete') : t('setup.ingestDashboard.header.syncing')}
         </h2>
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {allDone
-            ? `Indexed ${totalSynced} items across ${connectedIds.length} source${connectedIds.length !== 1 ? 's' : ''}.`
-            : 'This may take a few minutes depending on your data volume.'}
+            ? t('setup.ingestDashboard.header.indexedSummary', {
+                totalSynced,
+                count: connectedIds.length,
+              })
+            : t('setup.ingestDashboard.header.syncingHint')}
         </p>
       </div>
 
@@ -166,11 +175,11 @@ export function IngestDashboard({
           }}
         >
           {!allDone && <Loader2 size={16} className="animate-spin" />}
-          Start Researching →
+          {t('setup.ingestDashboard.startResearching')}
         </button>
         {!allDone && (
           <p className="text-center text-xs mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
-            Sync will continue in the background
+            {t('setup.ingestDashboard.backgroundSyncHint')}
           </p>
         )}
       </div>

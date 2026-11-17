@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, Cpu, X, Download, Loader2, Trash2, Check, Cloud, Key, Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../lib/store';
 import {
   pullModel,
@@ -85,6 +86,7 @@ const CLOUD_PROVIDERS: CloudProvider[] = [
 type Tab = 'installed' | 'catalogue' | 'cloud';
 
 export function CommandPalette() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [tab, setTab] = useState<Tab>('installed');
@@ -118,7 +120,7 @@ export function CommandPalette() {
       setCloudKeyStatus(await getCloudKeyStatus());
       setCloudKeyError(null);
     } catch (e: any) {
-      setCloudKeyError(e?.message || 'Failed to read cloud key status');
+      setCloudKeyError(e?.message || t('commandPalette.errors.readCloudKeyStatusFailed'));
     }
   }, [desktopKeyStorage]);
 
@@ -192,7 +194,7 @@ export function CommandPalette() {
       await refreshModels();
       setSelectedModel(modelId);
     } catch (e: any) {
-      setPullError(e.message || 'Download failed');
+      setPullError(e.message || t('commandPalette.errors.downloadFailed'));
       useAppStore.getState().addLogEntry({
         timestamp: Date.now(), level: 'error', category: 'model',
         message: `Download failed for ${modelId}: ${e.message}`,
@@ -242,7 +244,7 @@ export function CommandPalette() {
       });
       await refreshModels();
     } catch (e: any) {
-      setCloudKeyError(e?.message || `Failed to save ${provider.name} API key`);
+      setCloudKeyError(e?.message || t('commandPalette.errors.saveKeyFailed', { provider: provider.name }));
     } finally {
       setSavingKey(null);
     }
@@ -270,9 +272,9 @@ export function CommandPalette() {
   };
 
   const TAB_LABELS: Record<Tab, string> = {
-    installed: `Installed Models (${models.length})`,
-    catalogue: 'Download',
-    cloud: 'Cloud Models',
+    installed: t('commandPalette.tabs.installed', { count: models.length }),
+    catalogue: t('commandPalette.tabs.catalogue'),
+    cloud: t('commandPalette.tabs.cloud'),
   };
 
   return (
@@ -322,7 +324,7 @@ export function CommandPalette() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={tab === 'installed' ? 'Search installed models...' : 'Search models to download...'}
+              placeholder={tab === 'installed' ? t('commandPalette.search.installedPlaceholder') : t('commandPalette.search.cataloguePlaceholder')}
               className="flex-1 bg-transparent outline-none text-sm"
               style={{ color: 'var(--color-text)' }}
             />
@@ -344,7 +346,7 @@ export function CommandPalette() {
         )}
         {pullSuccess && (
           <div className="px-4 py-2 text-xs flex items-center gap-1.5" style={{ color: 'var(--color-success)', background: 'color-mix(in srgb, var(--color-success) 5%, transparent)' }}>
-            <Check size={12} /> Downloaded {pullSuccess} successfully
+            <Check size={12} /> {t('commandPalette.status.downloadedSuccessfully', { model: pullSuccess })}
           </div>
         )}
         {tab === 'cloud' && cloudKeyError && (
@@ -359,8 +361,8 @@ export function CommandPalette() {
             filtered.length === 0 ? (
               <div className="px-4 py-6 text-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
                 {models.length === 0
-                  ? 'No models available — switch to "Download" to get started'
-                  : 'No matching models'}
+                  ? t('commandPalette.emptyState.noModelsAvailable')
+                  : t('commandPalette.emptyState.noMatchingModels')}
               </div>
             ) : (
               (filtered as typeof models).map((model, idx) => {
@@ -391,7 +393,7 @@ export function CommandPalette() {
                       </div>
                       {isActive && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
-                          Active
+                          {t('commandPalette.badges.active')}
                         </span>
                       )}
                     </button>
@@ -401,7 +403,7 @@ export function CommandPalette() {
                         disabled={isDeleting}
                         className="p-1 rounded transition-colors cursor-pointer"
                         style={{ color: 'var(--color-text-tertiary)', opacity: 0 }}
-                        title="Delete model"
+                        title={t('commandPalette.tooltips.deleteModel')}
                         onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = 'var(--color-error)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.color = 'var(--color-text-tertiary)'; }}
                       >
@@ -434,21 +436,21 @@ export function CommandPalette() {
                         opacity: (isPulling || (pulling && !isPulling)) ? 0.5 : 1,
                       }}
                     >
-                      {isPulling ? <><Loader2 size={12} className="animate-spin" /> Downloading...</> :
-                       justInstalled ? <><Check size={12} /> Installed</> :
-                       <><Download size={12} /> Download</>}
+                      {isPulling ? <><Loader2 size={12} className="animate-spin" /> {t('commandPalette.catalogue.downloading')}</> :
+                       justInstalled ? <><Check size={12} /> {t('commandPalette.catalogue.installed')}</> :
+                       <><Download size={12} /> {t('commandPalette.catalogue.download')}</>}
                     </button>
                   </div>
                 );
               })}
               <div className="px-4 py-3 mt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
-                <div className="text-[11px] mb-2" style={{ color: 'var(--color-text-tertiary)' }}>Or enter any Ollama model name:</div>
+                <div className="text-[11px] mb-2" style={{ color: 'var(--color-text-tertiary)' }}>{t('commandPalette.catalogue.customModelLabel')}</div>
                 <div className="flex gap-2">
                   <input
                     type="text" value={customModel}
                     onChange={(e) => setCustomModel(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCustomPull(); } }}
-                    placeholder="e.g. codellama:7b"
+                    placeholder={t('commandPalette.catalogue.customModelPlaceholder')}
                     className="flex-1 text-sm px-3 py-1.5 rounded-lg outline-none"
                     style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
                   />
@@ -457,7 +459,7 @@ export function CommandPalette() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer"
                     style={{ background: 'var(--color-accent)', color: 'var(--color-on-accent)', opacity: (!customModel.trim() || pulling) ? 0.5 : 1 }}
                   >
-                    <Download size={12} /> Pull
+                    <Download size={12} /> {t('commandPalette.catalogue.pull')}
                   </button>
                 </div>
               </div>
@@ -467,8 +469,8 @@ export function CommandPalette() {
             <div className="px-4 py-2">
               <div className="text-[11px] mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
                 {desktopKeyStorage
-                  ? 'Add your API keys to use cloud models. Keys are stored in secure desktop storage.'
-                  : 'Configure cloud provider keys in the server environment to use cloud models.'}
+                  ? t('commandPalette.cloud.desktopKeyStorageInfo')
+                  : t('commandPalette.cloud.serverKeyStorageInfo')}
               </div>
 
               {CLOUD_PROVIDERS.map((provider) => {
@@ -485,7 +487,7 @@ export function CommandPalette() {
                       <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>{provider.name}</span>
                       {hasKey && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--color-success) 10%, transparent)', color: 'var(--color-success)' }}>
-                          Connected
+                          {t('commandPalette.cloud.connected')}
                         </span>
                       )}
                     </div>
@@ -499,7 +501,7 @@ export function CommandPalette() {
                           value={key}
                           onChange={(e) => setApiKeys((prev) => ({ ...prev, [provider.envKey]: e.target.value }))}
                           onBlur={() => handleKeyBlur(provider)}
-                          placeholder={hasSavedKey ? 'Saved in secure storage' : provider.envKey}
+                          placeholder={hasSavedKey ? t('commandPalette.cloud.savedInSecureStorage') : provider.envKey}
                           disabled={!desktopKeyStorage || isSaving}
                           className="flex-1 text-xs px-2 py-1.5 bg-transparent outline-none font-mono"
                           style={{ color: 'var(--color-text)' }}
@@ -518,7 +520,7 @@ export function CommandPalette() {
                           className="px-2 py-1 rounded-lg text-[10px] cursor-pointer"
                           style={{ color: 'var(--color-error)', border: '1px solid var(--color-error)', opacity: isSaving ? 0.5 : 1 }}
                         >
-                          {isSaving ? 'Saving' : 'Remove'}
+                          {isSaving ? t('commandPalette.cloud.saving') : t('commandPalette.cloud.remove')}
                         </button>
                       )}
                     </div>
@@ -548,7 +550,7 @@ export function CommandPalette() {
                               </div>
                               {isActive && (
                                 <span className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
-                                  Active
+                                  {t('commandPalette.badges.active')}
                                 </span>
                               )}
                             </button>
@@ -570,14 +572,14 @@ export function CommandPalette() {
         >
           {tab === 'installed' ? (
             <>
-              <span><kbd className="font-mono">↑↓</kbd> Navigate</span>
-              <span><kbd className="font-mono">Enter</kbd> Select</span>
-              <span><kbd className="font-mono">Esc</kbd> Close</span>
+              <span><kbd className="font-mono">↑↓</kbd> {t('commandPalette.footer.navigate')}</span>
+              <span><kbd className="font-mono">Enter</kbd> {t('commandPalette.footer.select')}</span>
+              <span><kbd className="font-mono">Esc</kbd> {t('commandPalette.footer.close')}</span>
             </>
           ) : tab === 'catalogue' ? (
-            <span>Models are downloaded from the Ollama registry</span>
+            <span>{t('commandPalette.footer.catalogueHint')}</span>
           ) : (
-            <span>API keys are stored locally and never sent to OpenJarvis servers</span>
+            <span>{t('commandPalette.footer.cloudHint')}</span>
           )}
         </div>
       </div>

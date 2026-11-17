@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type UpdateState = 'idle' | 'available' | 'downloading' | 'ready' | 'error';
 
@@ -24,6 +25,7 @@ export function setAutoUpdateDisabled(disabled: boolean): void {
 }
 
 export function UpdateChecker() {
+  const { t } = useTranslation();
   const [state, setState] = useState<UpdateState>('idle');
   const [version, setVersion] = useState('');
   const [progress, setProgress] = useState(0);
@@ -92,7 +94,7 @@ export function UpdateChecker() {
 
       setState('ready');
     } catch (e: any) {
-      setErrorMsg(e?.message || 'Download failed');
+      setErrorMsg(e?.message || t('desktop.updateChecker.downloadFailed'));
       setState('error');
       setTimeout(() => setState('idle'), 5000);
     }
@@ -103,7 +105,7 @@ export function UpdateChecker() {
       const { relaunch } = await import('@tauri-apps/plugin-process');
       await relaunch();
     } catch {
-      setErrorMsg('Please restart the application manually');
+      setErrorMsg(t('desktop.updateChecker.restartManually'));
       setState('error');
       setTimeout(() => setState('idle'), 5000);
     }
@@ -121,18 +123,18 @@ export function UpdateChecker() {
     <div style={styles.banner}>
       {state === 'available' && (
         <div style={styles.row}>
-          <span>Update available: <strong>v{version}</strong></span>
+          <span>{t('desktop.updateChecker.updateAvailable')} <strong>v{version}</strong></span>
           <div style={styles.actions}>
-            <button style={styles.primaryBtn} onClick={handleDownload}>Download</button>
-            <button style={styles.secondaryBtn} onClick={() => setDismissed(true)}>Later</button>
-            <button style={styles.muteBtn} onClick={handleDisable}>Disable auto-updates</button>
+            <button style={styles.primaryBtn} onClick={handleDownload}>{t('desktop.updateChecker.download')}</button>
+            <button style={styles.secondaryBtn} onClick={() => setDismissed(true)}>{t('desktop.updateChecker.later')}</button>
+            <button style={styles.muteBtn} onClick={handleDisable}>{t('desktop.updateChecker.disableAutoUpdates')}</button>
           </div>
         </div>
       )}
 
       {state === 'downloading' && (
         <div style={styles.row}>
-          <span>Downloading update... {progress}%</span>
+          <span>{t('desktop.updateChecker.downloadingUpdate', { progress })}</span>
           <div style={styles.progressBar}>
             <div style={{ ...styles.progressFill, width: `${progress}%` }} />
           </div>
@@ -141,17 +143,17 @@ export function UpdateChecker() {
 
       {state === 'ready' && (
         <div style={styles.row}>
-          <span style={{ color: '#a6e3a1' }}>Update installed.</span>
+          <span style={{ color: '#a6e3a1' }}>{t('desktop.updateChecker.updateInstalled')}</span>
           <div style={styles.actions}>
-            <button style={styles.successBtn} onClick={handleRelaunch}>Relaunch now</button>
-            <button style={styles.secondaryBtn} onClick={() => setDismissed(true)}>Later</button>
+            <button style={styles.successBtn} onClick={handleRelaunch}>{t('desktop.updateChecker.relaunchNow')}</button>
+            <button style={styles.secondaryBtn} onClick={() => setDismissed(true)}>{t('desktop.updateChecker.later')}</button>
           </div>
         </div>
       )}
 
       {state === 'error' && (
         <div style={styles.row}>
-          <span style={{ color: '#f38ba8' }}>Update error: {errorMsg}</span>
+          <span style={{ color: '#f38ba8' }}>{t('desktop.updateChecker.updateErrorPrefix', { message: errorMsg })}</span>
         </div>
       )}
     </div>

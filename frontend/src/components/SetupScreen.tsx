@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader2, CheckCircle2, XCircle, Cpu, Server, Database } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   getSetupStatus,
   fetchModels,
@@ -11,13 +12,16 @@ import { useAppStore } from '../lib/store';
 import { isEmbedOnlyModel } from '../lib/model-capabilities';
 import { InferenceRecoveryButton, InferenceSourceSetup } from './InferenceSourceSetup';
 
-const STEPS = [
-  { key: 'ollama_ready', label: 'Inference Engine', icon: Cpu, detail: 'Starting Ollama...' },
-  { key: 'model_ready', label: 'AI Model', icon: Database, detail: 'Loading model...' },
-  { key: 'server_ready', label: 'API Server', icon: Server, detail: 'Starting server...' },
-] as const;
+function useSteps() {
+  const { t } = useTranslation();
+  return [
+    { key: 'ollama_ready', label: t('setupScreen.steps.inferenceEngine.label'), icon: Cpu, detail: t('setupScreen.steps.inferenceEngine.detail') },
+    { key: 'model_ready', label: t('setupScreen.steps.aiModel.label'), icon: Database, detail: t('setupScreen.steps.aiModel.detail') },
+    { key: 'server_ready', label: t('setupScreen.steps.apiServer.label'), icon: Server, detail: t('setupScreen.steps.apiServer.detail') },
+  ] as const;
+}
 
-type StepKey = (typeof STEPS)[number]['key'];
+type StepKey = 'ollama_ready' | 'model_ready' | 'server_ready';
 
 function StepRow({
   icon: Icon,
@@ -32,6 +36,7 @@ function StepRow({
   active: boolean;
   detail: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="flex items-center gap-4 px-5 py-4 rounded-xl transition-all"
@@ -58,7 +63,7 @@ function StepRow({
           {label}
         </div>
         <div className="text-xs truncate" style={{ color: 'var(--color-text-tertiary)', maxWidth: '280px' }}>
-          {done ? 'Ready' : active ? detail : 'Waiting...'}
+          {done ? t('setupScreen.status.ready') : active ? detail : t('setupScreen.status.waiting')}
         </div>
       </div>
       <div className="shrink-0">
@@ -78,6 +83,8 @@ function StepRow({
 }
 
 export function SetupScreen({ onReady }: { onReady: () => void }) {
+  const { t } = useTranslation();
+  const STEPS = useSteps();
   const [status, setStatus] = useState<SetupStatus | null>(null);
   const [statusChecked, setStatusChecked] = useState(false);
   const [setupInitiated, setSetupInitiated] = useState(false);
@@ -174,14 +181,14 @@ export function SetupScreen({ onReady }: { onReady: () => void }) {
             <Cpu size={32} />
           </div>
           <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text)' }}>
-            OpenJarvis
+            Close-UP
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             {!statusChecked
-              ? 'Checking your saved setup...'
+              ? t('setupScreen.header.checkingSetup')
               : status?.source === 'custom'
-                ? 'Connecting to your AI server...'
-                : 'Setting up your local AI...'}
+                ? t('setupScreen.header.connectingCustom')
+                : t('setupScreen.header.settingUpLocal')}
           </p>
         </div>
 
@@ -189,9 +196,9 @@ export function SetupScreen({ onReady }: { onReady: () => void }) {
         <div className="flex flex-col gap-2 mb-8">
           {(status?.source === 'custom'
             ? [
-                { key: 'ollama_ready' as const, label: 'Inference Engine', icon: Cpu, detail: 'Connecting to your server...' },
-                { key: 'model_ready' as const, label: 'Endpoint', icon: Database, detail: 'Checking endpoint...' },
-                { key: 'server_ready' as const, label: 'API Server', icon: Server, detail: 'Starting server...' },
+                { key: 'ollama_ready' as const, label: t('setupScreen.stepsCustom.inferenceEngine.label'), icon: Cpu, detail: t('setupScreen.stepsCustom.inferenceEngine.detail') },
+                { key: 'model_ready' as const, label: t('setupScreen.stepsCustom.endpoint.label'), icon: Database, detail: t('setupScreen.stepsCustom.endpoint.detail') },
+                { key: 'server_ready' as const, label: t('setupScreen.stepsCustom.apiServer.label'), icon: Server, detail: t('setupScreen.stepsCustom.apiServer.detail') },
               ]
             : STEPS
           ).map((step) => (

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GitBranch, Clock, ChevronRight, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { getBase, authHeaders } from '../../lib/api';
 
 interface TraceStepData {
@@ -46,6 +47,7 @@ function StepBadge({ type }: { type: string }) {
 }
 
 function TraceCard({ trace, isActive, onClick }: { trace: TraceSummary; isActive: boolean; onClick: () => void }) {
+  const { t } = useTranslation();
   const totalMs = trace.steps.reduce((sum, s) => sum + s.duration_ms, 0);
 
   return (
@@ -60,10 +62,10 @@ function TraceCard({ trace, isActive, onClick }: { trace: TraceSummary; isActive
       onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
     >
       <div className="text-sm truncate mb-1" style={{ color: 'var(--color-text)' }}>
-        {trace.query || 'Untitled query'}
+        {trace.query || t('dashboard.traceDebugger.untitledQuery')}
       </div>
       <div className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>
-        <span>{trace.steps.length} steps</span>
+        <span>{t('dashboard.traceDebugger.stepsCount', { count: trace.steps.length })}</span>
         <span>&middot;</span>
         <span>{totalMs.toFixed(0)}ms</span>
         <span>&middot;</span>
@@ -119,6 +121,7 @@ function StepDetail({ step, index }: { step: TraceStep; index: number }) {
 }
 
 export function TraceDebugger() {
+  const { t } = useTranslation();
   const [traces, setTraces] = useState<TraceSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -132,9 +135,9 @@ export function TraceDebugger() {
       setTraces(data.traces || []);
       setError(null);
     } catch {
-      setError('Cannot load traces');
+      setError(t('dashboard.traceDebugger.cannotLoadTraces'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchTraces();
@@ -147,7 +150,7 @@ export function TraceDebugger() {
       <div className="hud-panel p-6">
         <h3 className="hud-label flex items-center gap-2 mb-4">
           <GitBranch size={12} style={{ color: 'var(--color-accent)' }} />
-          Trace Debugger
+          {t('dashboard.traceDebugger.title')}
         </h3>
         <div className="h-48 flex items-center justify-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
           <span className="hud-mono">{error}</span>
@@ -160,12 +163,12 @@ export function TraceDebugger() {
     <div className="hud-panel p-6">
       <h3 className="hud-label flex items-center gap-2 mb-4">
         <GitBranch size={12} style={{ color: 'var(--color-accent)' }} />
-        Trace Debugger
+        {t('dashboard.traceDebugger.title')}
       </h3>
 
       {traces.length === 0 ? (
         <div className="h-48 flex items-center justify-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-          No traces yet. Start making queries to see them here.
+          {t('dashboard.traceDebugger.noTracesYet')}
         </div>
       ) : (
         <div className="flex gap-4 h-80">
@@ -194,7 +197,7 @@ export function TraceDebugger() {
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-                Select a trace to view details
+                {t('dashboard.traceDebugger.selectTraceToView')}
               </div>
             )}
           </div>

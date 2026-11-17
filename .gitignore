@@ -131,3 +131,9 @@ learning.db
 minion_logs/
 *.oj-debug.json
 oj-debug.*.json
+
+# Generated documents from pdf_generate/file_write test runs — these can
+# contain whatever data the agent was asked to write and should never be
+# tracked. Legitimate repo PDFs (none at the time of writing) would be an
+# explicit exception, not the default.
+/*.pdf

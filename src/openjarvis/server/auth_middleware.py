@@ -1,4 +1,4 @@
-"""API key authentication middleware for the OpenJarvis server."""
+"""API key authentication middleware for the Close-UP server."""
 
 from __future__ import annotations
 

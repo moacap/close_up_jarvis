@@ -1,0 +1,1044 @@
+{
+  "common": {
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "add": "Adicionar",
+    "edit": "Editar",
+    "loading": "Carregando...",
+    "error": "Erro",
+    "retry": "Tentar novamente",
+    "confirm": "Confirmar",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "search": "Buscar"
+  },
+  "settings": {
+    "language": {
+      "label": "Idioma",
+      "description": "Idioma usado na interface e nas respostas do assistente."
+    },
+    "about": {
+      "links": {
+        "documentation": "Documentação",
+        "projectSite": "Site do projeto"
+      },
+      "researchNote": "Parte do Intelligence Per Watt, uma iniciativa de pesquisa da Stanford SAIL.",
+      "tagline": "Abstrações de programação para IA no dispositivo.",
+      "title": "Sobre"
+    },
+    "apiKeys": {
+      "anthropic": {
+        "description": "Modelos Claude"
+      },
+      "atlasCloud": {
+        "description": "Modelos roteados pela Atlas Cloud",
+        "placeholder": "Chave de API da Atlas Cloud"
+      },
+      "google": {
+        "description": "Modelos Gemini"
+      },
+      "openai": {
+        "description": "GPT-4, GPT-3.5, etc."
+      },
+      "openrouter": {
+        "description": "Roteamento entre vários provedores"
+      },
+      "remove": "Remover",
+      "removeFailed": "Falha ao remover a chave de API",
+      "saved": "Salvo",
+      "savedByLocalServer": "Salva pelo servidor local",
+      "savedInSecureStorage": "Salva em armazenamento seguro",
+      "saveFailed": "Falha ao salvar a chave de API",
+      "title": "Chaves de API"
+    },
+    "appearance": {
+      "fontSize": {
+        "default": "Padrão",
+        "label": "Tamanho da fonte",
+        "large": "Grande",
+        "small": "Pequeno"
+      },
+      "theme": {
+        "description": "Escolha a aparência do Close-UP",
+        "label": "Tema",
+        "light": "Claro",
+        "dark": "Escuro",
+        "system": "Sistema"
+      },
+      "timeZone": {
+        "automatic": "Automático ({{zone}})",
+        "description": "As datas e horários nas respostas usam este fuso. Agora: {{zone}} ({{offset}})",
+        "label": "Fuso horário"
+      },
+      "title": "Aparência"
+    },
+    "connection": {
+      "apiKey": {
+        "description": "Necessária apenas se o servidor foi iniciado com uma chave de API",
+        "label": "Chave de API"
+      },
+      "apiUrl": {
+        "description": "Defina se o backend roda em outra porta ou host",
+        "label": "URL da API"
+      },
+      "serverStatus": {
+        "checking": "Verificando...",
+        "connected": "Conectado",
+        "disconnected": "Desconectado",
+        "label": "Status do servidor",
+        "notConnected": "Não conectado"
+      },
+      "title": "Conexão"
+    },
+    "data": {
+      "clearAll": {
+        "button": "Limpar",
+        "confirmText": "Clique novamente para confirmar",
+        "description": "Excluir permanentemente todas as conversas",
+        "label": "Limpar todos os dados"
+      },
+      "conversations": {
+        "description": "{{count}} armazenadas localmente",
+        "label": "Conversas"
+      },
+      "export": "Exportar",
+      "import": "Importar",
+      "title": "Dados"
+    },
+    "inferenceSource": {
+      "apiKeyOptional": {
+        "description": "Apenas se o seu servidor exigir uma",
+        "label": "Chave de API (opcional)",
+        "placeholder": "deixe em branco se não houver"
+      },
+      "model": {
+        "description": "ID do modelo fornecido pelo seu endpoint",
+        "label": "Modelo"
+      },
+      "save": {
+        "button": "Salvar fonte de inferência",
+        "failed": "Falha ao salvar.",
+        "success": "Salvo — reinicie o aplicativo para aplicar."
+      },
+      "serverType": {
+        "description": "Mecanismo compatível com OpenAI",
+        "label": "Tipo de servidor"
+      },
+      "serverUrl": {
+        "description": "ex.: LM Studio: http://localhost:1234/v1",
+        "label": "URL do servidor"
+      },
+      "source": {
+        "customOption": "Servidor personalizado compatível com OpenAI",
+        "description": "Onde o aplicativo executa os modelos. Aplicado após reiniciar.",
+        "label": "Fonte",
+        "ollamaOption": "Ollama incluído (padrão)"
+      },
+      "title": "Fonte de inferência"
+    },
+    "memory": {
+      "backend": {
+        "description": "Qual mecanismo de busca usar",
+        "label": "Backend de memória"
+      },
+      "maxTokens": {
+        "label": "Máximo de tokens de contexto"
+      },
+      "minScore": {
+        "label": "Pontuação mínima de relevância"
+      },
+      "status": {
+        "backendEntries": "Backend {{backend}} — {{count}} entradas",
+        "checkingBackend": "Verificando o backend de memória...",
+        "checkingLabel": "Verificando...",
+        "entriesCount": "{{count}} entradas",
+        "label": "Status da memória",
+        "notConfiguredDescription": "A memória não está configurada",
+        "notConfiguredLabel": "Não configurado",
+        "retry": "Tentar novamente",
+        "unavailable": "Indisponível"
+      },
+      "title": "Memória",
+      "topK": {
+        "label": "Resultados a injetar"
+      },
+      "useContext": {
+        "description": "Injetar automaticamente memórias relevantes nas conversas",
+        "label": "Usar contexto de memória"
+      }
+    },
+    "modelDefaults": {
+      "maxTokens": {
+        "label": "Máximo de tokens"
+      },
+      "temperature": {
+        "label": "Temperatura"
+      },
+      "title": "Padrões do modelo"
+    },
+    "models": {
+      "cloudProviders": {
+        "description": "Ponto verde indica que a chave de API está configurada",
+        "label": "Provedores de nuvem"
+      },
+      "localModels": {
+        "description": "Modelos disponíveis para inferência local",
+        "label": "Modelos locais (Ollama)"
+      },
+      "noModelsLoaded": "Nenhum modelo carregado",
+      "ollamaHint": {
+        "after": "no seu terminal para adicionar mais modelos",
+        "before": "Execute"
+      },
+      "title": "Modelos"
+    },
+    "page": {
+      "savedBadge": "Salvo",
+      "subtitle": "Preferências do aplicativo — aparência, padrões do modelo, atalhos de teclado e gerenciamento de dados.",
+      "title": "Configurações"
+    },
+    "speech": {
+      "autoplay": {
+        "description": "Ler em voz alta cada resposta do assistente assim que terminar",
+        "label": "Falar as respostas automaticamente"
+      },
+      "backendStatus": {
+        "available": "Disponível",
+        "checking": "Verificando...",
+        "description": "Requer Whisper, Deepgram ou outro backend de fala",
+        "label": "Status do backend",
+        "notConfigured": "Não configurado"
+      },
+      "setupHint": {
+        "after": "para mais detalhes.",
+        "before": "Configure um backend de fala para usar entrada por voz. Veja a",
+        "linkText": "documentação"
+      },
+      "stt": {
+        "description": "Ativar entrada de microfone para ditado por voz",
+        "label": "Fala para texto"
+      },
+      "title": "Fala",
+      "tts": {
+        "description": "Exibir um botão de leitura em voz alta nas respostas do assistente",
+        "label": "Texto para fala"
+      },
+      "voice": {
+        "checking": "Verificando...",
+        "description": "Backend e voz usados nas respostas faladas",
+        "label": "Voz",
+        "notConfigured": "Não configurado"
+      }
+    },
+    "tools": {
+      "title": "Ferramentas",
+      "webSearch": {
+        "description": "Chave do Tavily para a ferramenta de busca na web",
+        "label": "Busca na web"
+      }
+    },
+    "updates": {
+      "autoUpdate": {
+        "description": "Verificar automaticamente novas versões do aplicativo a cada 30 minutos",
+        "label": "Atualização automática"
+      },
+      "checkNow": {
+        "available": "Atualização disponível — veja o aviso acima",
+        "checking": "Verificando...",
+        "description": "Verificar manualmente se há uma nova versão agora",
+        "idle": "Verificar agora",
+        "label": "Verificar atualizações",
+        "latest": "Já está atualizado"
+      },
+      "title": "Atualizações"
+    }
+  },
+  "approvalBell": {
+    "bellTooltip": "Aprovações do agente",
+    "heading": "Aprovações do Agente",
+    "pendingCount": "{{count}} pendente(s)",
+    "noPendingApprovals": "Nenhuma aprovação pendente",
+    "viewDetails": "Ver detalhes",
+    "hideDetails": "Ocultar detalhes",
+    "approve": "Aprovar",
+    "deny": "Negar",
+    "tier": {
+      "trivial": "Trivial",
+      "low": "Baixo",
+      "medium": "Médio",
+      "high": "Alto"
+    },
+    "time": {
+      "justNow": "agora mesmo",
+      "minutesAgo": "há {{m}}min",
+      "hoursAgo": "há {{h}}h",
+      "daysAgo": "há {{d}}d"
+    }
+  },
+  "chat": {
+    "messageBubble": {
+      "codeLabel": "código",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "copyMessage": "Copiar mensagem"
+    },
+    "researchTimeline": {
+      "searchesCount_one": "{{count}} busca",
+      "searchesCount_other": "{{count}} buscas",
+      "resultsCount_one": "{{count}} resultado",
+      "resultsCount_other": "{{count}} resultados",
+      "personMeta": "pessoa: {{person}}",
+      "timeMeta": "período: {{time}}",
+      "afterDate": "depois de {{date}}",
+      "beforeDate": "antes de {{date}}",
+      "searchStep": "Busca {{index}}",
+      "analyzingQuery": "Analisando consulta",
+      "synthesizingFindings": "Sintetizando descobertas",
+      "collapseSearchTrace": "Recolher trilha de busca",
+      "expandSearchTrace": "Expandir trilha de busca"
+    },
+    "xrayFooter": {
+      "deepResearch": "Pesquisa Avançada",
+      "inputTokens": "{{count}} tokens de entrada",
+      "outputTokens": "{{count}} tokens de saída",
+      "totalTokens": "{{count}} tokens",
+      "modeLabel": "Modo",
+      "engineLabel": "Motor",
+      "tokensLabel": "Tokens",
+      "complexityLabel": "Complexidade",
+      "tokenBudgetLabel": "Orçamento de tokens",
+      "speedLabel": "Velocidade",
+      "latencyLabel": "Latência",
+      "generatedTokens": "{{count}} gerados",
+      "promptTokens": "{{count}} de prompt",
+      "thinkingTokens": "~{{count}} pensando",
+      "total": "Total"
+    },
+    "toolCallCard": {
+      "argsLabel": "args",
+      "resultLabel": "resultado",
+      "downloadFile": "Baixar {{fileName}}"
+    },
+    "chatArea": {
+      "greetingMorning": "Bom dia",
+      "greetingAfternoon": "Boa tarde",
+      "greetingEvening": "Boa noite",
+      "hideSystemPanel": "Ocultar painel do sistema ({{shortcut}}+I)",
+      "showSystemPanel": "Mostrar painel do sistema ({{shortcut}}+I)",
+      "connectDataSourcesBanner": "Conecte suas fontes de dados (Gmail, iMessage, Slack, etc.) para obter respostas personalizadas.",
+      "connect": "Conectar",
+      "welcomeMessage": "Pergunte qualquer coisa. Sua IA roda localmente — privada, rápida e sempre disponível.",
+      "connectDataSourcesButton": "Conectar Fontes de Dados",
+      "setupMessagingButton": "Configurar Canais de Mensagens"
+    },
+    "audioPlayer": {
+      "morningDigest": "Resumo Matinal"
+    },
+    "systemPanel": {
+      "title": "Sistema",
+      "closePanel": "Fechar painel",
+      "session": "Sessão",
+      "requests": "Solicitações",
+      "outputTokens": "Tokens de Saída",
+      "device": "Dispositivo",
+      "cpuTemp": "Temp. da CPU",
+      "gpuTemp": "Temp. da GPU",
+      "power": "Potência",
+      "energy": "Energia",
+      "costComparison": "Comparação de Custo",
+      "local": "Local",
+      "leaderboard": "Classificação",
+      "sharingSavings": "Compartilhando Economia",
+      "shareYourSavings": "Compartilhe Sua Economia",
+      "on": "ATIVADO",
+      "off": "DESATIVADO",
+      "viewLeaderboard": "Ver Classificação"
+    },
+    "inputArea": {
+      "pickModelFirst": "Escolha um modelo primeiro (⌘K)",
+      "phaseResearching": "Pesquisando...",
+      "phaseGenerating": "Gerando...",
+      "phaseSearching": "Buscando: {{query}}",
+      "phaseAgentThinking": "Agente pensando...",
+      "phaseCallingTool": "Chamando {{tool}}...",
+      "logResearchRequest": "Pesquisa: \"{{content}}\"",
+      "logChatRequest": "Solicitação: \"{{content}}\" → {{model}}",
+      "logSearch": "Busca: \"{{query}}\"{{personSuffix}}",
+      "logSearchPersonSuffix": " (pessoa: {{person}})",
+      "logDeepResearchError": "Erro na Pesquisa Avançada: {{message}}",
+      "logGeneratingWithModel": "Gerando com {{model}}...",
+      "logCallingTool": "Chamando {{tool}}({{args}})",
+      "logStreamError": "Erro no fluxo: {{message}}",
+      "logResponseChars": "Resposta: {{count}} caracteres",
+      "researchFailedNoDetail": "A pesquisa falhou (nenhum detalhe fornecido)",
+      "researchStoppedLabel": "**Pesquisa interrompida:** {{message}}",
+      "researchFailedLabel": "**A pesquisa falhou:** {{message}}",
+      "generationStopped": "(Geração interrompida)",
+      "errorPrefix": "Erro: {{message}}",
+      "noResponseGenerated": "Nenhuma resposta foi gerada. Tente novamente.",
+      "deepResearch": "Pesquisa Avançada",
+      "deepResearchOn": "Pesquisa Avançada: ativada",
+      "deepResearchOff": "Pesquisa Avançada: desativada",
+      "searchingOverItemsPrefix": "Buscando em",
+      "searchingOverItemsSuffix": "itens — sincronização em andamento, os resultados vão melhorar conforme mais dados forem indexados.",
+      "messagePlaceholder": "Mensagem para o Close-UP...",
+      "pickModelFirstPlaceholder": "Escolha um modelo primeiro (⌘K)...",
+      "stopGenerating": "Parar geração",
+      "sendMessage": "Enviar mensagem",
+      "keyEnter": "Enter",
+      "toSend": "para enviar",
+      "keyShiftEnter": "Shift+Enter",
+      "forNewLine": "para nova linha"
+    },
+    "micButton": {
+      "enableInSettings": "Ativar nas Configurações",
+      "noBackend": "Backend de fala não configurado",
+      "waitForResponse": "Aguarde a resposta",
+      "stopRecording": "Parar gravação",
+      "transcribing": "Transcrevendo...",
+      "voiceInput": "Entrada por voz"
+    },
+    "speakMessageButton": {
+      "synthesizing": "Sintetizando...",
+      "stop": "Parar",
+      "readAloud": "Ler em voz alta",
+      "stopReadingAriaLabel": "Parar leitura da mensagem",
+      "readAloudAriaLabel": "Ler mensagem em voz alta"
+    }
+  },
+  "layout": {
+    "healthBanner": {
+      "cannotReachBackend": "Não foi possível conectar ao backend do Close-UP",
+      "changeUrl": "Alterar URL"
+    }
+  },
+  "sidebar": {
+    "nav": {
+      "chat": "Chat",
+      "dashboard": "Painel",
+      "dataSources": "Fontes de Dados",
+      "agents": "Agentes",
+      "logs": "Registros",
+      "settings": "Configurações",
+      "getStarted": "Primeiros Passos"
+    },
+    "themeToggle": {
+      "tooltip": "Tema: {{current}} (clique para {{next}})"
+    },
+    "newChat": {
+      "tooltip": "Nova conversa"
+    },
+    "model": {
+      "deepResearch": "Pesquisa Avançada",
+      "selectModel": "Selecionar modelo",
+      "loading": "Carregando modelo..."
+    },
+    "search": {
+      "placeholder": "Buscar conversas..."
+    },
+    "conversationList": {
+      "justNow": "Agora mesmo",
+      "minutesAgo": "{{minutes}}min atrás",
+      "hoursAgo": "{{hours}}h atrás",
+      "daysAgo": "{{days}}d atrás",
+      "noMatchingChats": "Nenhuma conversa encontrada",
+      "noConversationsYet": "Nenhuma conversa ainda",
+      "stopGeneratingTooltip": "Pare a geração antes de excluir esta conversa",
+      "deleteConversationTooltip": "Excluir conversa"
+    }
+  },
+  "commandPalette": {
+    "errors": {
+      "readCloudKeyStatusFailed": "Falha ao ler o status da chave na nuvem",
+      "downloadFailed": "Falha no download",
+      "saveKeyFailed": "Falha ao salvar a chave de API da {{provider}}"
+    },
+    "tabs": {
+      "installed": "Modelos Instalados ({{count}})",
+      "catalogue": "Baixar",
+      "cloud": "Modelos na Nuvem"
+    },
+    "search": {
+      "installedPlaceholder": "Buscar modelos instalados...",
+      "cataloguePlaceholder": "Buscar modelos para baixar..."
+    },
+    "status": {
+      "downloadedSuccessfully": "{{model}} baixado com sucesso"
+    },
+    "emptyState": {
+      "noModelsAvailable": "Nenhum modelo disponível — mude para \"Baixar\" para começar",
+      "noMatchingModels": "Nenhum modelo encontrado"
+    },
+    "badges": {
+      "active": "Ativo"
+    },
+    "tooltips": {
+      "deleteModel": "Excluir modelo"
+    },
+    "catalogue": {
+      "downloading": "Baixando...",
+      "installed": "Instalado",
+      "download": "Baixar",
+      "customModelLabel": "Ou digite o nome de qualquer modelo do Ollama:",
+      "customModelPlaceholder": "ex.: codellama:7b",
+      "pull": "Puxar"
+    },
+    "cloud": {
+      "desktopKeyStorageInfo": "Adicione suas chaves de API para usar modelos na nuvem. As chaves são armazenadas em um armazenamento seguro do desktop.",
+      "serverKeyStorageInfo": "Configure as chaves do provedor de nuvem no ambiente do servidor para usar modelos na nuvem.",
+      "connected": "Conectado",
+      "savedInSecureStorage": "Salvo em armazenamento seguro",
+      "saving": "Salvando",
+      "remove": "Remover"
+    },
+    "footer": {
+      "navigate": "Navegar",
+      "select": "Selecionar",
+      "close": "Fechar",
+      "catalogueHint": "Os modelos são baixados do registro do Ollama",
+      "cloudHint": "As chaves de API são armazenadas localmente e nunca enviadas aos servidores do Close-UP"
+    }
+  },
+  "optInModal": {
+    "errors": {
+      "analyticsLoadFailed": "Não foi possível carregar as análises. Você pode tentar salvar sua escolha novamente.",
+      "displayNameLength": "Insira um nome de exibição com 2 a 30 caracteres.",
+      "profaneName": "Escolha um nome diferente.",
+      "invalidEmail": "Insira um endereço de e-mail válido.",
+      "saveSharingFailed": "Não foi possível salvar sua escolha de compartilhamento.",
+      "saveAnalyticsFailed": "Não foi possível salvar sua escolha de análises."
+    },
+    "status": {
+      "analyticsEnabled": "Análises de uso ativadas.",
+      "analyticsOff": "Análises de uso desativadas."
+    },
+    "closeAriaLabel": "Fechar opções de compartilhamento",
+    "title": "Ganhe um Mac mini",
+    "description": "Compartilhe sua economia no ranking e concorra a um Mac mini.",
+    "displayNameLabel": "Nome de exibição (público)",
+    "displayNamePlaceholder": "Seu nome no ranking",
+    "emailLabel": "E-mail (não exibido)",
+    "analyticsDisclaimer": "As análises opcionais enviam contagens de uso, tempos, erros, metadados do ambiente e um ID aleatório para o PostHog.",
+    "leaderboardDisclaimer": "As participações no ranking enviam seu nome, e-mail e economia para o Supabase. Seu nome e sua economia são públicos; o e-mail não é exibido.",
+    "privacyDetails": "Detalhes de privacidade",
+    "leaderboardStatus": "Compartilhamento no ranking ativado · Análises {{state}}",
+    "analyticsStateOn": "ativadas",
+    "analyticsStateOff": "desativadas",
+    "savingButton": "Salvando…",
+    "disableAnalytics": "Desativar análises",
+    "enableAnalytics": "Ativar análises",
+    "done": "Concluído",
+    "stopLeaderboardUpdates": "Parar atualizações no ranking",
+    "enableAnalyticsAndEnter": "Ativar análises e participar do sorteio",
+    "enterGiveawayOnly": "Participar apenas do sorteio",
+    "enableAnalyticsOnly": "Ativar apenas as análises",
+    "continueWithoutSharing": "Continuar sem compartilhar"
+  },
+  "inferenceSourceSetup": {
+    "chooseTitle": "Escolha sua fonte de inferência",
+    "chooseSubtitle": "Nada é instalado, iniciado ou baixado até que você confirme uma escolha.",
+    "localOllamaTitle": "Ollama local",
+    "localOllamaDescription": "Execute modelos neste computador. Requer uma confirmação separada antes que o Ollama inicie ou um modelo seja baixado.",
+    "customServerTitle": "Servidor compatível com OpenAI",
+    "customServerDescription": "Conecte-se ao LM Studio, vLLM, SGLang, llama.cpp, MLX ou outro endpoint compatível. O Ollama permanece desativado.",
+    "back": "Voltar",
+    "cancel": "Cancelar",
+    "stoppingSetup": "Interrompendo a configuração...",
+    "changeInferenceSource": "Alterar fonte de inferência",
+    "allowLocalSetupTitle": "Permitir configuração de modelo local?",
+    "allowLocalSetupDescription": "O Close-UP iniciará o Ollama e poderá baixar um modelo selecionado para este computador. Os downloads de modelos podem usar vários gigabytes de espaço em disco e de dados de rede.",
+    "goingBackNotice": "Voltar mantém o Ollama parado e não salva esta escolha.",
+    "startingLocalSetup": "Iniciando a configuração local...",
+    "useOllamaAndContinue": "Usar o Ollama e continuar",
+    "connectServerTitle": "Conecte seu servidor",
+    "connectServerDescription": "O Close-UP só se conectará depois que você enviar este formulário. O Ollama não será iniciado nem baixará modelos.",
+    "serverUrlLabel": "URL do servidor",
+    "modelIdLabel": "ID do modelo",
+    "serverTypeLabel": "Tipo de servidor",
+    "apiKeyLabel": "Chave de API (opcional)",
+    "apiKeyAriaLabel": "Chave de API",
+    "connecting": "Conectando...",
+    "saveAndConnect": "Salvar e conectar"
+  },
+  "setupScreen": {
+    "header": {
+      "checkingSetup": "Verificando sua configuração salva...",
+      "connectingCustom": "Conectando ao seu servidor de IA...",
+      "settingUpLocal": "Configurando sua IA local..."
+    },
+    "status": {
+      "ready": "Pronto",
+      "waiting": "Aguardando..."
+    },
+    "steps": {
+      "inferenceEngine": {
+        "label": "Motor de Inferência",
+        "detail": "Iniciando o Ollama..."
+      },
+      "aiModel": {
+        "label": "Modelo de IA",
+        "detail": "Carregando modelo..."
+      },
+      "apiServer": {
+        "label": "Servidor de API",
+        "detail": "Iniciando o servidor..."
+      }
+    },
+    "stepsCustom": {
+      "inferenceEngine": {
+        "label": "Motor de Inferência",
+        "detail": "Conectando ao seu servidor..."
+      },
+      "endpoint": {
+        "label": "Endpoint",
+        "detail": "Verificando endpoint..."
+      },
+      "apiServer": {
+        "label": "Servidor de API",
+        "detail": "Iniciando o servidor..."
+      }
+    }
+  },
+  "setup": {
+    "readyScreen": {
+      "title": "Tudo pronto!",
+      "connectedSummary_one": "{{count}} fonte conectada: {{sources}}.",
+      "connectedSummary_other": "{{count}} fontes conectadas: {{sources}}.",
+      "readyDefault": "Sua IA pessoal está pronta para ajudar.",
+      "askAnything": "Pergunte qualquer coisa sobre seu trabalho e sua vida.",
+      "tryAsking": "Experimente perguntar",
+      "openChat": "Abrir Chat",
+      "starters": {
+        "emails": "Quais e-mails precisam da minha atenção hoje?",
+        "calendar": "O que tenho na minha agenda esta semana?",
+        "slack": "Resuma as mensagens importantes do Slack de ontem",
+        "notes": "Encontre minhas anotações sobre planejamento de projetos",
+        "texting": "Sobre o que tenho conversado por mensagem ultimamente?",
+        "collaborators": "Quem são meus colaboradores mais frequentes?",
+        "meetingNotes": "Resuma minhas anotações de reuniões recentes",
+        "fallback": {
+          "focus": "No que devo focar hoje?",
+          "summarize": "Resuma minha atividade recente",
+          "draft": "Ajude-me a redigir uma atualização rápida"
+        }
+      }
+    },
+    "sourceConnectFlow": {
+      "filesystem": {
+        "prompt": "Digite o caminho da sua pasta local do {{displayName}}.",
+        "pathPlaceholder": "/Users/você/Documentos/..."
+      },
+      "connect": "Conectar",
+      "skipForNow": "Pular por agora",
+      "oauth": {
+        "waitingForAuth": "Aguardando a autorização do {{displayName}}... Conclua isso na janela do navegador.",
+        "connectPrompt": "Conecte sua conta do {{displayName}} com um clique.",
+        "waitingShort": "Aguardando autorização...",
+        "connectButton": "Conectar {{displayName}}"
+      },
+      "local": {
+        "description": "{{displayName}} lê dados diretamente do seu Mac. Certifique-se de que o aplicativo esteja instalado e de que o Acesso Total ao Disco esteja concedido ao Close-UP nas Configurações do Sistema.",
+        "systemSettings": "Configurações do Sistema",
+        "fullDiskAccessPath": "→ Privacidade e Segurança → Acesso Total ao Disco → ative o Close-UP",
+        "checkAccess": "Verificar Acesso"
+      },
+      "stepByStep": {
+        "stepLabel": "PASSO {{number}}",
+        "open": "Abrir",
+        "readOnlyNotice": "Acesso somente leitura · Nenhum dado sai do seu dispositivo",
+        "connecting": "Conectando...",
+        "connectButton": "Conectar {{displayName}}",
+        "skip": "Pular"
+      },
+      "sidebarTitle": "Fontes",
+      "connected": "Conectado",
+      "allConfigured": "Todas as fontes configuradas",
+      "continue": "Continuar →"
+    },
+    "sourcePicker": {
+      "title": "Conecte suas fontes",
+      "subtitle": "Escolha quais fontes de dados incluir na sua base de conhecimento pessoal.",
+      "categories": {
+        "communication": "Comunicação",
+        "documents": "Documentos",
+        "personalInfo": "Informações Pessoais"
+      },
+      "selectToContinue": "Selecione fontes para continuar",
+      "connectCount_one": "Conectar {{count}} fonte",
+      "connectCount_other": "Conectar {{count}} fontes"
+    },
+    "ingestDashboard": {
+      "header": {
+        "syncComplete": "Sincronização concluída",
+        "syncing": "Sincronizando seus dados...",
+        "indexedSummary_one": "{{totalSynced}} itens indexados em {{count}} fonte.",
+        "indexedSummary_other": "{{totalSynced}} itens indexados em {{count}} fontes.",
+        "syncingHint": "Isso pode levar alguns minutos, dependendo do volume dos seus dados."
+      },
+      "progress": {
+        "syncedOfTotal": "{{synced}} / {{total}}",
+        "itemsCount_one": "{{count}} item",
+        "itemsCount_other": "{{count}} itens",
+        "paused": "Pausado",
+        "error": "Erro",
+        "starting": "Iniciando..."
+      },
+      "startResearching": "Começar a Pesquisar →",
+      "backgroundSyncHint": "A sincronização continuará em segundo plano"
+    }
+  },
+  "desktop": {
+    "settingsPanel": {
+      "title": "Configurações",
+      "apiUrlLabel": "URL da API",
+      "refreshIntervalLabel": "Intervalo de atualização automática",
+      "secondsOption_one": "{{count}} segundo",
+      "secondsOption_other": "{{count}} segundos",
+      "themeLabel": "Tema",
+      "themeDark": "Escuro",
+      "themeLight": "Claro",
+      "savedNotice": "Configurações salvas"
+    },
+    "traceDebugger": {
+      "emptyTitle": "Nenhum rastreamento disponível.",
+      "emptyDescription": "Os rastreamentos são registrados quando as consultas são processadas pelo sistema.",
+      "traces": "Rastreamentos",
+      "recentTraces_one": "{{count}} rastreamento recente",
+      "recentTraces_other": "{{count}} rastreamentos recentes",
+      "stepsCount_one": "{{count}} etapa",
+      "stepsCount_other": "{{count}} etapas",
+      "selectTracePrompt": "Selecione um rastreamento na lista para inspecionar suas etapas.",
+      "loadingTrace": "Carregando rastreamento...",
+      "traceHeading": "Rastreamento {{id}}",
+      "queryLabel": "Consulta: \"{{query}}\"",
+      "stepsLabel": "Etapas:",
+      "totalLabel": "Total:",
+      "createdLabel": "Criado em:",
+      "noSteps": "Este rastreamento não contém etapas.",
+      "showLess": "Mostrar menos",
+      "showMoreFields_one": "Mostrar mais {{count}} campo...",
+      "showMoreFields_other": "Mostrar mais {{count}} campos..."
+    },
+    "adminPanel": {
+      "loading": "Carregando status do sistema...",
+      "healthUnknown": "Desconhecido",
+      "healthHealthy": "Saudável",
+      "healthUnhealthy": "Não saudável",
+      "title": "Painel de Administração",
+      "systemHealth": "Saúde do Sistema",
+      "engine": "Motor",
+      "notAvailable": "N/D",
+      "model": "Modelo",
+      "agent": "Agente",
+      "systemInfo": "Informações do Sistema",
+      "version": "Versão",
+      "uptime": "Tempo ativo",
+      "apiUrl": "URL da API",
+      "startServer": "Iniciar Servidor",
+      "stopServer": "Parar Servidor",
+      "agentRegistryCount": "Registro de Agentes ({{count}})",
+      "name": "Nome",
+      "key": "Chave",
+      "toolsColumn": "Ferramentas",
+      "description": "Descrição",
+      "yes": "Sim",
+      "no": "Não",
+      "agentRegistry": "Registro de Agentes",
+      "noAgentsRegistered": "Nenhum agente registrado ou servidor inacessível."
+    },
+    "agentsPanel": {
+      "never": "Nunca",
+      "justNow": "Agora mesmo",
+      "minutesAgo": "há {{count}}m",
+      "hoursAgo": "há {{count}}h",
+      "daysAgo": "há {{count}}d",
+      "scheduleManual": "Manual",
+      "scheduleCronWithValue": "Cron: {{value}}",
+      "scheduleCron": "Cron",
+      "scheduleIntervalWithValue": "A cada {{value}}",
+      "scheduleInterval": "Intervalo",
+      "agentNameRequired": "O nome do agente é obrigatório.",
+      "createAgentFailed": "Falha ao criar o agente. Tente novamente.",
+      "launchAgentTitle": "Lançar Agente",
+      "chooseTemplate": "Escolha um modelo ou comece do zero",
+      "customAgent": "Agente Personalizado",
+      "customAgentDesc": "Comece do zero com controle total",
+      "agentNameLabel": "Nome do Agente *",
+      "agentNamePlaceholder": "ex.: Assistente de Pesquisa",
+      "scheduleTypeLabel": "Tipo de Agendamento",
+      "scheduleValueLabel": "Valor do Agendamento",
+      "toolsLabel": "Ferramentas",
+      "toolWebSearch": "Busca na Web",
+      "toolCodeInterpreter": "Interpretador de Código",
+      "toolFileRead": "Leitura de Arquivo",
+      "toolShellExec": "Execução de Shell",
+      "toolBrowser": "Navegador",
+      "toolCalculator": "Calculadora",
+      "budgetLabel": "Orçamento ($, opcional)",
+      "budgetPlaceholder": "ex.: 5.00",
+      "enableLearning": "Ativar Aprendizado",
+      "reviewTitle": "Revise sua configuração",
+      "reviewName": "Nome",
+      "reviewTemplate": "Modelo",
+      "reviewSchedule": "Agendamento",
+      "reviewBudget": "Orçamento",
+      "reviewLearning": "Aprendizado",
+      "unnamed": "(sem nome)",
+      "customValue": "Personalizado",
+      "noneValue": "Nenhum",
+      "unlimited": "Ilimitado",
+      "enabledValue": "Ativado",
+      "disabledValue": "Desativado",
+      "cancel": "Cancelar",
+      "back": "Voltar",
+      "next": "Próximo",
+      "launchingEllipsis": "Lançando...",
+      "launchAction": "Lançar",
+      "noMessagesYet": "Nenhuma mensagem ainda. Envie uma mensagem ao agente abaixo.",
+      "sendMessageFailed": "Falha ao enviar mensagem.",
+      "senderYou": "Você",
+      "senderAgent": "Agente",
+      "messagePlaceholder": "Envie uma mensagem para este agente… (Enter para enviar)",
+      "modeLabel": "Modo:",
+      "modeQueued": "na fila",
+      "modeImmediate": "imediato",
+      "sendAction": "Enviar",
+      "noTasksFound": "Nenhuma tarefa encontrada.",
+      "createdAt": "Criado {{time}}",
+      "summaryMemoryTitle": "Resumo de Memória",
+      "noMemoryStored": "Nenhuma memória armazenada ainda.",
+      "statusLabel": "Status",
+      "agentTypeLabel": "Tipo de Agente",
+      "lastRunLabel": "Última Execução",
+      "totalRunsLabel": "Total de Execuções",
+      "totalCostLabel": "Custo Total",
+      "runNowAction": "▶ Executar Agora",
+      "pauseAction": "⏸ Pausar",
+      "resumeAction": "▶ Retomar",
+      "recoverAction": "↺ Recuperar",
+      "runLearningAction": "Executar Aprendizado",
+      "runningEllipsis": "Executando...",
+      "noLearningEvents": "Nenhum evento de aprendizado ainda. Execute o agente ou acione o aprendizado manualmente.",
+      "noExecutionTraces": "Nenhum rastro de execução ainda. Execute o agente para gerar rastros.",
+      "executionTracesTitle": "Rastros de Execução",
+      "traceCount_one": "{{count}} rastro",
+      "traceCount_other": "{{count}} rastros",
+      "stepCount_one": "{{count}} etapa",
+      "stepCount_other": "{{count}} etapas",
+      "tabOverview": "Visão Geral",
+      "tabInteract": "Interagir",
+      "tabTasks": "Tarefas",
+      "tabMemory": "Memória",
+      "tabLogs": "Registros",
+      "agentMetaLine": "{{agentType}} · Agendamento: {{schedule}} · Última execução: {{lastRun}}",
+      "loadingAgents": "Carregando agentes...",
+      "agentsCountTitle": "Agentes ({{count}})",
+      "launchButtonLabel": "+ Lançar",
+      "deleteAgentTitle": "Excluir agente",
+      "lastRunPrefix": "Última execução: {{time}}",
+      "noAgentsFound": "Nenhum agente encontrado.",
+      "noAgentsHint": "Clique em \"{{launchLabel}}\" para criar um.",
+      "confirmDeleteAgent": "Excluir este agente? Esta ação não pode ser desfeita.",
+      "selectAgentPrompt": "Selecione um agente para ver os detalhes"
+    },
+    "updateChecker": {
+      "updateAvailable": "Atualização disponível:",
+      "download": "Baixar",
+      "later": "Mais tarde",
+      "disableAutoUpdates": "Desativar atualizações automáticas",
+      "downloadingUpdate": "Baixando atualização... {{progress}}%",
+      "updateInstalled": "Atualização instalada.",
+      "relaunchNow": "Reiniciar agora",
+      "updateErrorPrefix": "Erro na atualização: {{message}}",
+      "downloadFailed": "Falha no download",
+      "restartManually": "Reinicie o aplicativo manualmente"
+    },
+    "learningCurve": {
+      "loadingData": "Carregando dados de aprendizado...",
+      "title": "Curva de Aprendizado",
+      "policyConfigTitle": "Configuração da Política",
+      "policyLabel": "Política",
+      "unknown": "desconhecido",
+      "statusLabel": "Status",
+      "enabled": "Ativado",
+      "disabled": "Desativado",
+      "updateInterval": "Intervalo de atualização",
+      "countersTitle": "Contadores",
+      "totalTraces": "Total de traços",
+      "policyUpdates": "Atualizações de política",
+      "iclExamples": "Exemplos ICL",
+      "discoveredSkills": "Habilidades descobertas",
+      "chartTitle": "Precisão de Roteamento ao Longo do Tempo",
+      "accuracyPercent": "Precisão %",
+      "latencyMs": "Latência (ms)",
+      "grpoRoutingWeightsTitle": "Pesos de Roteamento GRPO",
+      "queryClassColumn": "Classe de Consulta",
+      "modelColumn": "Modelo",
+      "weightColumn": "Peso",
+      "banditArmStatsTitle": "Estatísticas dos Braços do Bandit",
+      "pullsColumn": "Puxadas",
+      "meanRewardColumn": "Recompensa Média",
+      "ucbColumn": "UCB"
+    },
+    "memoryBrowser": {
+      "title": "Navegador de Memória",
+      "backendLabel": "Backend",
+      "documentsLabel": "Documentos",
+      "chunksLabel": "Fragmentos",
+      "indexSizeLabel": "Tamanho do Índice",
+      "searchPlaceholder": "Pesquisar memória...",
+      "searchingButton": "Pesquisando...",
+      "searchButton": "Pesquisar",
+      "noResultsFound": "Nenhum resultado encontrado para \"{{query}}\"",
+      "showingResults": "Mostrando {{count}} de {{total}} resultados",
+      "relevanceLabel": "Relevância",
+      "enterQueryPrompt": "Digite uma consulta para pesquisar na memória"
+    },
+    "savingsDashboard": {
+      "title": "Painel de Economia",
+      "noDataAvailable": "Nenhum dado de economia disponível.",
+      "noDataHint": "Comece a fazer solicitações de inferência para ver a economia em relação aos provedores em nuvem.",
+      "liveIndicator": "Ao vivo - {{seconds}}s",
+      "shareYourSavings": "Compartilhe Sua Economia",
+      "optInDescription": "Participe para compartilhar sua economia de forma privada e concorrer a um Mac Mini!",
+      "displayNamePlaceholder": "Nome de exibição para o ranking",
+      "emailLabel": "E-mail",
+      "neverShownPublicly": "(nunca exibido publicamente)",
+      "emailPlaceholder": "seu@email.com",
+      "nameLengthError": "O nome deve ter de 2 a 30 caracteres",
+      "profaneNameError": "Por favor, escolha outro nome",
+      "invalidEmailError": "Por favor, insira um endereço de e-mail válido",
+      "joinLeaderboardButton": "Entrar no Ranking",
+      "cancelButton": "Cancelar",
+      "optOutButton": "Sair",
+      "sharingAsLabel": "Compartilhando como \"{{displayName}}\"",
+      "viewLeaderboardLink": "Ver Ranking ↗",
+      "totalRequestsLabel": "Total de Solicitações",
+      "totalTokensLabel": "Total de Tokens",
+      "sessionDurationLabel": "Duração da Sessão",
+      "localCostLabel": "Custo Local",
+      "savingsVsProvidersHeading": "Economia em Relação aos Provedores em Nuvem*",
+      "inputSavedLabel": "Entrada Economizada",
+      "outputSavedLabel": "Saída Economizada",
+      "savingsFootnote": "*As estimativas de economia pressupõem que os modelos locais (ex.: Qwen, Nemotron, Kimi) produzam, em média, aproximadamente o mesmo número de tokens por solicitação que os modelos em nuvem de código fechado.",
+      "vsCloudAgentPlatformsHeading": "em Relação às Plataformas de Agentes em Nuvem",
+      "typicalCloudAgentPlatform": "Plataforma Típica de Agentes em Nuvem",
+      "basedOnPublishedPricing": "com base nas faixas de preço de API publicadas",
+      "moderateUseLabel": "USO MODERADO",
+      "heavyUseLabel": "USO INTENSO",
+      "yourCostLabel": "SEU CUSTO",
+      "localInferenceLabel": "inferência local",
+      "monthlyProjectionHeading": "Projeção Mensal",
+      "vsProviderLabel": "em relação a {{label}}",
+      "projectedMonthlySavings": "economia mensal projetada",
+      "perMonthAtCurrentRate": "por mês na taxa atual"
+    },
+    "energyDashboard": {
+      "title": "Monitor de Energia",
+      "noDataAvailable": "Nenhum dado de energia disponível.",
+      "noDataHint": "Certifique-se de que um backend de monitoramento de energia (NVIDIA, AMD, Apple ou RAPL) esteja configurado.",
+      "liveIndicator": "Ao vivo - {{seconds}}s",
+      "totalEnergyLabel": "Energia Total",
+      "energyPerTokenLabel": "Energia por Token",
+      "avgPowerDrawLabel": "Consumo Médio de Energia",
+      "thermalStatusLabel": "Status Térmico",
+      "thermal": {
+        "cool": "Frio",
+        "warm": "Morno",
+        "hot": "Quente"
+      },
+      "totalRequestsLabel": "Total de Solicitações",
+      "totalTokensLabel": "Total de Tokens",
+      "chartTitle": "Consumo de Energia ao Longo do Tempo (W)"
+    }
+  },
+  "pages": {
+    "logs": {
+      "title": "Logs",
+      "entriesCount": "{{count}} entradas",
+      "copyAll": "Copiar Tudo",
+      "clear": "Limpar",
+      "description": "Atividade recente — eventos de chat, trocas de modelo, chamadas de ferramentas e mensagens do sistema desta sessão.",
+      "empty": "Ainda não há entradas de log. Os logs aparecem conforme você conversa, troca de modelo e interage com o app."
+    },
+    "getStarted": {
+      "copy": "Copiar",
+      "appName": "Close-UP",
+      "tagline": "IA privada que roda no seu hardware. Chat, ferramentas, agentes e análise de energia — sem necessidade de nuvem.",
+      "serverRunning": "O servidor está em execução",
+      "startChatting": "Começar a Conversar",
+      "serverNotResponding": "O servidor não está respondendo. O backend pode estar iniciando.",
+      "checkingServer": "Verificando servidor...",
+      "desktopHeading": "Close-UP Desktop",
+      "desktopTagline": "Sua IA local está pronta. Tudo roda no seu dispositivo — nenhum dado sai da sua máquina.",
+      "allSystemsRunning": "Todos os sistemas em funcionamento",
+      "systemsActiveDescription": "O mecanismo de inferência Ollama, o servidor de API e o modelo de IA estão ativos.",
+      "keyboardShortcutsTitle": "Atalhos de Teclado",
+      "shortcutModelPicker": "Seletor de modelo",
+      "shortcutSystemPanel": "Painel do sistema",
+      "shortcutNewChat": "Nova conversa",
+      "desktopApp": "App de Desktop",
+      "desktopAppDescription": "Instalação em um clique. Inclui o Ollama e o servidor — nenhuma configuração necessária.",
+      "downloadFor": "Baixar para {{platform}}",
+      "or": "Ou",
+      "platformName": {
+        "mac-arm": "macOS (Apple Silicon)",
+        "mac-intel": "macOS (Intel)",
+        "windows": "Windows (64 bits)",
+        "linux-deb": "Linux (DEB)",
+        "linux-rpm": "Linux (RPM)"
+      },
+      "cliSectionTitle": "Linha de Comando (macOS / Linux)",
+      "cloneInstallInstruction": "Clone e instale (requer Python 3.10+):",
+      "getStartedInstruction": "Depois, comece:",
+      "browserSectionTitle": "App no Navegador (Autogerenciado)",
+      "launchApiInstruction": "Inicie o servidor de API para obter a interface completa no seu navegador:",
+      "browserFeaturesDescription": "O chat, o painel, a análise de energia e a comparação de custos são executados localmente na sua máquina.",
+      "dockerSectionTitle": "Docker (Implantação em Nuvem / VPS)",
+      "dockerDeployInstruction": "Implante com o Docker Compose para uma instância hospedada sem configuração:",
+      "dockerDescription": "Isso inicia o servidor de API e o Ollama. A interface web é incluída e servida automaticamente na porta 8000.",
+      "systemRequirementsTitle": "Requisitos do Sistema",
+      "desktopAppRequirement": "Sem pré-requisitos — tudo já está incluído",
+      "cliSelfHostedTitle": "CLI / Autogerenciado",
+      "cliSelfHostedRequirement": "Python 3.10+ e um mecanismo de inferência (recomendado: Ollama)",
+      "memoryTitle": "Memória",
+      "memoryRequirement": "Recomenda-se 8 GB+ de RAM"
+    }
+  },
+  "dashboard": {
+    "costComparison": {
+      "title": "Comparação de Custo",
+      "awaitingFirstInference": "aguardando primeira inferência…",
+      "localHardware": "Local (seu hardware)",
+      "requestsAndTokens": "{{count}} solicitações · {{tokens}} tokens",
+      "electricityOnly": "apenas eletricidade",
+      "savedAmount": "${{amount}} economizados",
+      "footnote": "*As estimativas de economia pressupõem que os modelos locais (ex.: Qwen, Nemotron, Kimi) produzam, em média, aproximadamente o mesmo número de tokens por solicitação que os modelos em nuvem de código fechado."
+    },
+    "traceDebugger": {
+      "title": "Depurador de Rastreamento",
+      "untitledQuery": "Consulta sem título",
+      "stepsCount_one": "{{count}} etapa",
+      "stepsCount_other": "{{count}} etapas",
+      "cannotLoadTraces": "Não foi possível carregar os rastreamentos",
+      "noTracesYet": "Ainda não há rastreamentos. Comece a fazer consultas para vê-los aqui.",
+      "selectTraceToView": "Selecione um rastreamento para ver os detalhes"
+    },
+    "energyDashboard": {
+      "title": "Monitoramento de Energia",
+      "totalEnergy": "Energia Total",
+      "energyPerToken": "Energia / Token",
+      "avgPower": "Potência Média",
+      "totalRequests": "Total de Solicitações",
+      "thermal": "Térmico",
+      "tokensProcessed": "Tokens Processados",
+      "cool": "Frio",
+      "warm": "Morno",
+      "hot": "Quente",
+      "cannotConnect": "Não foi possível conectar ao servidor",
+      "awaitingTelemetry": "aguardando fluxo de telemetria…"
+    }
+  }
+}

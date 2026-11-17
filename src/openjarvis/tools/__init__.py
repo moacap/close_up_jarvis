@@ -38,6 +38,7 @@ _BUILTIN_TOOL_MODULES = (
     "git_tool",
     "db_query",
     "pdf_tool",
+    "pdf_generate",
     "image_tool",
     "audio_tool",
     "knowledge_tools",

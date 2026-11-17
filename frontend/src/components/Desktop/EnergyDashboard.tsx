@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type React from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from 'react-i18next';
 import {
   LineChart,
   Line,
@@ -195,10 +196,10 @@ function formatTimestamp(ts: string): string {
   }
 }
 
-function thermalIndicator(avgPower: number): { label: string; color: string } {
-  if (avgPower < 50) return { label: 'Cool', color: colors.green };
-  if (avgPower < 150) return { label: 'Warm', color: colors.yellow };
-  return { label: 'Hot', color: colors.red };
+function thermalIndicator(avgPower: number): { labelKey: 'cool' | 'warm' | 'hot'; color: string } {
+  if (avgPower < 50) return { labelKey: 'cool', color: colors.green };
+  if (avgPower < 150) return { labelKey: 'warm', color: colors.yellow };
+  return { labelKey: 'hot', color: colors.red };
 }
 
 // ---------------------------------------------------------------------------
@@ -208,6 +209,7 @@ function thermalIndicator(avgPower: number): { label: string; color: string } {
 const REFRESH_INTERVAL_MS = 5000;
 
 export function EnergyDashboard({ apiUrl }: { apiUrl: string }) {
+  const { t } = useTranslation();
   const [energyData, setEnergyData] = useState<EnergyData | null>(null);
   const [telemetry, setTelemetry] = useState<TelemetryStats | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -264,13 +266,13 @@ export function EnergyDashboard({ apiUrl }: { apiUrl: string }) {
     return (
       <div style={styles.container}>
         <div style={styles.header}>
-          <h2 style={styles.title}>Energy Monitor</h2>
+          <h2 style={styles.title}>{t('desktop.energyDashboard.title')}</h2>
         </div>
         <div style={styles.emptyState}>
           <div style={styles.emptyIcon}>&#x26A1;</div>
           <div style={styles.emptyText}>
-            No energy data available.<br />
-            Ensure an energy monitor backend (NVIDIA, AMD, Apple, or RAPL) is configured.
+            {t('desktop.energyDashboard.noDataAvailable')}<br />
+            {t('desktop.energyDashboard.noDataHint')}
           </div>
         </div>
       </div>
@@ -291,10 +293,10 @@ export function EnergyDashboard({ apiUrl }: { apiUrl: string }) {
 
       {/* Header */}
       <div style={styles.header}>
-        <h2 style={styles.title}>Energy Monitor</h2>
+        <h2 style={styles.title}>{t('desktop.energyDashboard.title')}</h2>
         <span style={styles.liveBadge}>
           <span style={styles.liveDot} />
-          Live - {REFRESH_INTERVAL_MS / 1000}s
+          {t('desktop.energyDashboard.liveIndicator', { seconds: REFRESH_INTERVAL_MS / 1000 })}
         </span>
       </div>
 
@@ -304,7 +306,7 @@ export function EnergyDashboard({ apiUrl }: { apiUrl: string }) {
       {/* Summary cards */}
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Total Energy</div>
+          <div style={styles.statLabel}>{t('desktop.energyDashboard.totalEnergyLabel')}</div>
           <div style={styles.statValue}>
             {energyData?.total_energy_j !== undefined
               ? formatEnergy(energyData.total_energy_j)
@@ -313,7 +315,7 @@ export function EnergyDashboard({ apiUrl }: { apiUrl: string }) {
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Energy per Token</div>
+          <div style={styles.statLabel}>{t('desktop.energyDashboard.energyPerTokenLabel')}</div>
           <div style={styles.statValue}>
             {energyData?.energy_per_token_j !== undefined ? (
               <>
@@ -327,7 +329,7 @@ export function EnergyDashboard({ apiUrl }: { apiUrl: string }) {
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Avg Power Draw</div>
+          <div style={styles.statLabel}>{t('desktop.energyDashboard.avgPowerDrawLabel')}</div>
           <div style={styles.statValue}>
             {energyData?.avg_power_w !== undefined ? (
               <>
@@ -341,22 +343,22 @@ export function EnergyDashboard({ apiUrl }: { apiUrl: string }) {
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Thermal Status</div>
+          <div style={styles.statLabel}>{t('desktop.energyDashboard.thermalStatusLabel')}</div>
           <div style={{ ...styles.thermalStatus, color: thermal.color }}>
-            {thermal.label}
+            {t(`desktop.energyDashboard.thermal.${thermal.labelKey}`)}
           </div>
         </div>
 
         {telemetry?.total_requests !== undefined && (
           <div style={styles.statCard}>
-            <div style={styles.statLabel}>Total Requests</div>
+            <div style={styles.statLabel}>{t('desktop.energyDashboard.totalRequestsLabel')}</div>
             <div style={styles.statValue}>{telemetry.total_requests.toLocaleString()}</div>
           </div>
         )}
 
         {telemetry?.total_tokens !== undefined && (
           <div style={styles.statCard}>
-            <div style={styles.statLabel}>Total Tokens</div>
+            <div style={styles.statLabel}>{t('desktop.energyDashboard.totalTokensLabel')}</div>
             <div style={styles.statValue}>{telemetry.total_tokens.toLocaleString()}</div>
           </div>
         )}
@@ -365,7 +367,7 @@ export function EnergyDashboard({ apiUrl }: { apiUrl: string }) {
       {/* Power chart */}
       {chartData.length > 0 && (
         <div style={styles.chartContainer}>
-          <div style={styles.chartTitle}>Power Draw Over Time (W)</div>
+          <div style={styles.chartTitle}>{t('desktop.energyDashboard.chartTitle')}</div>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={chartData} margin={{ top: 4, right: 20, left: 0, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />

@@ -1,26 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bell, CheckCircle, ChevronDown, ChevronUp, Clock, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { approveAction, denyAction, fetchPendingApprovals } from '../lib/api';
 import type { PendingApproval } from '../lib/api';
 
-const TIER_STYLES: Record<string, { label: string; color: string; bg: string }> = {
-  trivial: { label: 'Trivial', color: 'var(--color-text-secondary)', bg: 'color-mix(in srgb, var(--color-text-secondary) 10%, transparent)' },
-  low:     { label: 'Low',     color: '#3b82f6',                    bg: 'rgba(59,130,246,0.12)' },
-  medium:  { label: 'Medium',  color: 'var(--color-warning)',       bg: 'color-mix(in srgb, var(--color-warning) 12%, transparent)' },
-  high:    { label: 'High',    color: 'var(--color-error)',         bg: 'color-mix(in srgb, var(--color-error) 12%, transparent)' },
+const TIER_STYLES: Record<string, { labelKey: string; color: string; bg: string }> = {
+  trivial: { labelKey: 'approvalBell.tier.trivial', color: 'var(--color-text-secondary)', bg: 'color-mix(in srgb, var(--color-text-secondary) 10%, transparent)' },
+  low:     { labelKey: 'approvalBell.tier.low',     color: '#3b82f6',                    bg: 'rgba(59,130,246,0.12)' },
+  medium:  { labelKey: 'approvalBell.tier.medium',  color: 'var(--color-warning)',       bg: 'color-mix(in srgb, var(--color-warning) 12%, transparent)' },
+  high:    { labelKey: 'approvalBell.tier.high',    color: 'var(--color-error)',         bg: 'color-mix(in srgb, var(--color-error) 12%, transparent)' },
 };
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: TFunction): string {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return t('approvalBell.time.justNow');
+  if (m < 60) return t('approvalBell.time.minutesAgo', { m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 24) return t('approvalBell.time.hoursAgo', { h });
+  return t('approvalBell.time.daysAgo', { d: Math.floor(h / 24) });
 }
 
 export function ApprovalBell() {
+  const { t } = useTranslation();
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -80,7 +83,7 @@ export function ApprovalBell() {
       <button
         onClick={() => setOpen(o => !o)}
         className="relative p-2 rounded-lg transition-colors cursor-pointer"
-        title="Agent approvals"
+        title={t('approvalBell.bellTooltip')}
         style={{
           color: count > 0 ? 'var(--color-text)' : 'var(--color-text-secondary)',
           background: open
@@ -120,7 +123,7 @@ export function ApprovalBell() {
             <div className="flex items-center gap-2">
               <Bell size={13} style={{ color: 'var(--color-accent)' }} />
               <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-                Agent Approvals
+                {t('approvalBell.heading')}
               </span>
             </div>
             {count > 0 && (
@@ -131,7 +134,7 @@ export function ApprovalBell() {
                   color: 'var(--color-error)',
                 }}
               >
-                {count} pending
+                {t('approvalBell.pendingCount', { count })}
               </span>
             )}
           </div>
@@ -142,7 +145,7 @@ export function ApprovalBell() {
               <div className="flex flex-col items-center justify-center py-12 gap-2">
                 <CheckCircle size={26} style={{ color: 'var(--color-text-secondary)', opacity: 0.35 }} />
                 <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                  No pending approvals
+                  {t('approvalBell.noPendingApprovals')}
                 </span>
               </div>
             ) : (
@@ -173,14 +176,14 @@ export function ApprovalBell() {
                           className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
                           style={{ background: tier.bg, color: tier.color }}
                         >
-                          {tier.label}
+                          {t(tier.labelKey)}
                         </span>
                         <span
                           className="text-[10px] flex items-center gap-0.5"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
                           <Clock size={9} />
-                          {timeAgo(action.created_at)}
+                          {timeAgo(action.created_at, t)}
                         </span>
                       </div>
                     </div>
@@ -203,7 +206,7 @@ export function ApprovalBell() {
                         }
                       >
                         {isExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-                        {isExpanded ? 'Hide details' : 'View details'}
+                        {isExpanded ? t('approvalBell.hideDetails') : t('approvalBell.viewDetails')}
                       </button>
                     )}
 
@@ -236,7 +239,7 @@ export function ApprovalBell() {
                         }}
                       >
                         <CheckCircle size={12} />
-                        Approve
+                        {t('approvalBell.approve')}
                       </button>
                       <button
                         onClick={() => handleDeny(action.id)}
@@ -249,7 +252,7 @@ export function ApprovalBell() {
                         }}
                       >
                         <XCircle size={12} />
-                        Deny
+                        {t('approvalBell.deny')}
                       </button>
                     </div>
                   </div>

@@ -1,4 +1,4 @@
-"""FastAPI application factory for the OpenJarvis API server."""
+"""FastAPI application factory for the Close-UP API server."""
 
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ from openjarvis.server.comparison import comparison_router
 from openjarvis.server.connectors_router import create_connectors_router
 from openjarvis.server.dashboard import dashboard_router
 from openjarvis.server.digest_routes import create_digest_router
+from openjarvis.server.file_download_routes import router as file_download_router
 from openjarvis.server.research_router import router as research_router
 from openjarvis.server.routes import router
 from openjarvis.server.upload_router import router as upload_router
@@ -247,8 +248,8 @@ def create_app(
     )
 
     app = FastAPI(
-        title="OpenJarvis API",
-        description="OpenAI-compatible API server for OpenJarvis",
+        title="Close-UP API",
+        description="OpenAI-compatible API server for Close-UP",
         version="0.1.0",
     )
 
@@ -479,6 +480,7 @@ def create_app(
     app.include_router(comparison_router)
     app.include_router(create_connectors_router())
     app.include_router(create_digest_router())
+    app.include_router(file_download_router)
     app.include_router(upload_router)
     app.include_router(research_router)
     app.include_router(analytics_router)

@@ -17,6 +17,7 @@ import type {
 import type { ManagedAgent } from './api';
 import { isEmbedOnlyModel } from './model-capabilities';
 import { serializeToolCallArguments } from './tool-call';
+import i18n, { type Language } from '../i18n';
 
 export interface CachedConnector {
   connector_id: string;
@@ -110,6 +111,8 @@ interface Settings {
   voiceAutoplay: boolean;
   // IANA time zone for dates in answers; '' = this device's zone.
   timeZone: string;
+  // UI display language and the language the assistant replies in.
+  language: Language;
 }
 
 function loadSettings(): Settings {
@@ -126,6 +129,7 @@ function loadSettings(): Settings {
     voiceOutputEnabled: false,
     voiceAutoplay: false,
     timeZone: '',
+    language: i18n.language as Language,
   };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -548,6 +552,9 @@ export const useAppStore = create<AppState>((set, get) => {
     updateSettings: (partial: Partial<Settings>) => {
       const updated = { ...get().settings, ...partial };
       saveSettings(updated);
+      if (partial.language && partial.language !== i18n.language) {
+        void i18n.changeLanguage(partial.language);
+      }
       set({ settings: updated });
     },
 

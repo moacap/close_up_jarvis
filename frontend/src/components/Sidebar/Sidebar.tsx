@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import {
   MessageSquare,
   Plus,
@@ -25,6 +26,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
+  const { t } = useTranslation();
 
   const sidebarOpen = useAppStore((s) => s.sidebarOpen);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
@@ -53,13 +55,13 @@ export function Sidebar() {
   };
 
   const navItems = [
-    { path: '/', icon: MessageSquare, label: 'Chat' },
-    { path: '/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/data-sources', icon: Database, label: 'Data Sources' },
-    { path: '/agents', icon: Bot, label: 'Agents' },
-    { path: '/logs', icon: ScrollText, label: 'Logs' },
-    { path: '/settings', icon: Settings, label: 'Settings' },
-    { path: '/get-started', icon: Rocket, label: 'Get Started' },
+    { path: '/', icon: MessageSquare, label: t('sidebar.nav.chat') },
+    { path: '/dashboard', icon: BarChart3, label: t('sidebar.nav.dashboard') },
+    { path: '/data-sources', icon: Database, label: t('sidebar.nav.dataSources') },
+    { path: '/agents', icon: Bot, label: t('sidebar.nav.agents') },
+    { path: '/logs', icon: ScrollText, label: t('sidebar.nav.logs') },
+    { path: '/settings', icon: Settings, label: t('sidebar.nav.settings') },
+    { path: '/get-started', icon: Rocket, label: t('sidebar.nav.getStarted') },
   ];
 
   return (
@@ -109,7 +111,7 @@ export function Sidebar() {
                 style={{ color: 'var(--color-text-secondary)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg-tertiary)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                title={`Theme: ${settings.theme} (click for ${nextTheme})`}
+                title={t('sidebar.themeToggle.tooltip', { current: settings.theme, next: nextTheme })}
               >
                 <ThemeIcon size={16} />
               </button>
@@ -119,7 +121,7 @@ export function Sidebar() {
                 style={{ color: 'var(--color-text-secondary)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg-tertiary)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                title="New chat"
+                title={t('sidebar.newChat.tooltip')}
               >
                 <Plus size={18} />
               </button>
@@ -149,12 +151,12 @@ export function Sidebar() {
                 style={{ color: deepResearch ? 'var(--color-accent)' : 'var(--color-text)' }}
               >
                 {deepResearch
-                  ? 'Deep Research'
-                  : selectedModel || serverInfo?.model || 'Select model'}
+                  ? t('sidebar.model.deepResearch')
+                  : selectedModel || serverInfo?.model || t('sidebar.model.selectModel')}
               </span>
               {modelLoading && (
                 <span className="text-[10px] block text-left" style={{ color: 'var(--color-accent)' }}>
-                  Loading model...
+                  {t('sidebar.model.loading')}
                 </span>
               )}
             </div>
@@ -177,7 +179,7 @@ export function Sidebar() {
               <Search size={14} style={{ color: 'var(--color-text-tertiary)' }} />
               <input
                 type="text"
-                placeholder="Search chats..."
+                placeholder={t('sidebar.search.placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 bg-transparent outline-none text-sm"

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Trophy, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../lib/store';
 import { isProfane } from '../lib/profanity';
 import { fetchAnalyticsIdentity, saveAnalyticsPreference } from '../lib/analytics';
@@ -9,6 +10,7 @@ interface OptInModalProps {
 }
 
 export function OptInModal({ onClose }: OptInModalProps) {
+  const { t } = useTranslation();
   const setOptIn = useAppStore((s) => s.setOptIn);
   const optInDisplayName = useAppStore((s) => s.optInDisplayName);
   const optInEmail = useAppStore((s) => s.optInEmail);
@@ -28,7 +30,7 @@ export function OptInModal({ onClose }: OptInModalProps) {
     fetchAnalyticsIdentity()
       .then((identity) => { if (active) setAnalyticsEnabled(identity.enabled); })
       .catch(() => {
-        if (active) setError('Could not load analytics. You can retry saving your choice.');
+        if (active) setError(t('optInModal.errors.analyticsLoadFailed'));
       })
       .finally(() => { if (active) setAnalyticsLoading(false); });
     return () => { active = false; };
@@ -39,15 +41,15 @@ export function OptInModal({ onClose }: OptInModalProps) {
     const trimmed = name.trim();
     const trimmedEmail = email.trim();
     if (trimmed.length < 2 || trimmed.length > 30) {
-      setError('Please enter a display name with 2–30 characters.');
+      setError(t('optInModal.errors.displayNameLength'));
       return;
     }
     if (isProfane(trimmed)) {
-      setError('Please choose a different name.');
+      setError(t('optInModal.errors.profaneName'));
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setError('Please enter a valid email address.');
+      setError(t('optInModal.errors.invalidEmail'));
       return;
     }
     setError('');
@@ -57,9 +59,9 @@ export function OptInModal({ onClose }: OptInModalProps) {
       setAnalyticsEnabled(enableAnalytics);
       setOptIn(true, trimmed, trimmedEmail);
       setJoined(true);
-      setStatus(enableAnalytics ? 'Usage analytics enabled.' : 'Usage analytics are off.');
+      setStatus(enableAnalytics ? t('optInModal.status.analyticsEnabled') : t('optInModal.status.analyticsOff'));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save your sharing choice.');
+      setError(cause instanceof Error ? cause.message : t('optInModal.errors.saveSharingFailed'));
     } finally {
       setSaving(false);
     }
@@ -72,10 +74,10 @@ export function OptInModal({ onClose }: OptInModalProps) {
     try {
       await saveAnalyticsPreference(enabled);
       setAnalyticsEnabled(enabled);
-      setStatus(enabled ? 'Usage analytics enabled.' : 'Usage analytics are off.');
+      setStatus(enabled ? t('optInModal.status.analyticsEnabled') : t('optInModal.status.analyticsOff'));
       if (close) onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save your analytics choice.');
+      setError(cause instanceof Error ? cause.message : t('optInModal.errors.saveAnalyticsFailed'));
     } finally {
       setSaving(false);
     }
@@ -130,7 +132,7 @@ export function OptInModal({ onClose }: OptInModalProps) {
       >
         <button
           type="button"
-          aria-label="Close sharing choices"
+          aria-label={t('optInModal.closeAriaLabel')}
           onClick={onClose}
           disabled={saving}
           className="absolute right-3 top-3 p-1.5 rounded-lg cursor-pointer"
@@ -143,11 +145,11 @@ export function OptInModal({ onClose }: OptInModalProps) {
             style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}
           ><Trophy size={20} /></div>
           <h2 id="sharing-modal-title" className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
-            Win a Mac mini
+            {t('optInModal.title')}
           </h2>
         </div>
         <p className="text-sm leading-relaxed mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-          Share your savings on the leaderboard for a chance to win a Mac mini.
+          {t('optInModal.description')}
         </p>
 
         {error && <p role="alert" className="text-xs mb-3" style={{ color: 'var(--color-error)' }}>{error}</p>}
@@ -161,7 +163,7 @@ export function OptInModal({ onClose }: OptInModalProps) {
           >
             <div>
               <label htmlFor="sharing-display-name" className="block text-xs mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                Display name (public)
+                {t('optInModal.displayNameLabel')}
               </label>
               <input
                 id="sharing-display-name"
@@ -170,7 +172,7 @@ export function OptInModal({ onClose }: OptInModalProps) {
                 disabled={saving}
                 maxLength={30}
                 onChange={(event) => { setName(event.target.value); setError(''); }}
-                placeholder="Your leaderboard name"
+                placeholder={t('optInModal.displayNamePlaceholder')}
                 className="w-full rounded-lg px-3 py-2 text-base sm:text-sm"
                 style={inputStyle}
                 autoFocus
@@ -178,7 +180,7 @@ export function OptInModal({ onClose }: OptInModalProps) {
             </div>
             <div>
               <label htmlFor="sharing-contact-email" className="block text-xs mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                Email (not displayed)
+                {t('optInModal.emailLabel')}
               </label>
               <input
                 id="sharing-contact-email"
@@ -196,25 +198,25 @@ export function OptInModal({ onClose }: OptInModalProps) {
 
         <div className="text-xs leading-relaxed mb-3" style={{ color: 'var(--color-text-secondary)' }}>
           <p className="mb-1">
-            Optional analytics sends usage counts, timings, errors, environment metadata,
-            and a random ID to PostHog.
+            {t('optInModal.analyticsDisclaimer')}
           </p>
           <p>
-            Leaderboard entries send your name, email, and savings to Supabase.
-            Your name and savings are public; email is not displayed.
+            {t('optInModal.leaderboardDisclaimer')}
           </p>
           <a
             href="https://open-jarvis.github.io/OpenJarvis/telemetry/"
             target="_blank"
             rel="noreferrer"
             className="inline-block underline mt-1"
-          >Privacy details</a>
+          >{t('optInModal.privacyDetails')}</a>
         </div>
 
         {joined ? (
           <div className="space-y-2">
             <p className="text-sm mb-3" style={{ color: 'var(--color-text)' }}>
-              Leaderboard sharing enabled · Analytics {analyticsEnabled ? 'on' : 'off'}
+              {t('optInModal.leaderboardStatus', {
+                state: analyticsEnabled ? t('optInModal.analyticsStateOn') : t('optInModal.analyticsStateOff'),
+              })}
             </p>
             <button
               type="button"
@@ -222,16 +224,16 @@ export function OptInModal({ onClose }: OptInModalProps) {
               disabled={busy}
               className={buttonClass + ' w-full'}
               style={primaryStyle}
-            >{saving ? 'Saving…' : analyticsEnabled ? 'Disable analytics' : 'Enable analytics'}</button>
+            >{saving ? t('optInModal.savingButton') : analyticsEnabled ? t('optInModal.disableAnalytics') : t('optInModal.enableAnalytics')}</button>
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={onClose} disabled={saving} className={buttonClass} style={{ color: 'var(--color-text)' }}>Done</button>
+              <button type="button" onClick={onClose} disabled={saving} className={buttonClass} style={{ color: 'var(--color-text)' }}>{t('optInModal.done')}</button>
               <button
                 type="button"
                 onClick={() => { setOptIn(false, '', ''); setJoined(false); onClose(); }}
                 disabled={saving}
                 className={buttonClass}
                 style={{ color: 'var(--color-text-secondary)' }}
-              >Stop leaderboard updates</button>
+              >{t('optInModal.stopLeaderboardUpdates')}</button>
             </div>
           </div>
         ) : (
@@ -242,13 +244,13 @@ export function OptInModal({ onClose }: OptInModalProps) {
               disabled={busy}
               className={buttonClass + ' w-full'}
               style={primaryStyle}
-            >{saving ? 'Saving…' : 'Enable analytics & enter giveaway'}</button>
+            >{saving ? t('optInModal.savingButton') : t('optInModal.enableAnalyticsAndEnter')}</button>
             <div className="grid grid-cols-2 gap-2">
               <button type="submit" form="sharing-entry-form" disabled={busy} className={buttonClass} style={{ color: 'var(--color-text)' }}>
-                Enter giveaway only
+                {t('optInModal.enterGiveawayOnly')}
               </button>
               <button type="button" onClick={() => void handleAnalytics(true, true)} disabled={busy} className={buttonClass} style={{ color: 'var(--color-text)' }}>
-                Enable analytics only
+                {t('optInModal.enableAnalyticsOnly')}
               </button>
             </div>
             <button
@@ -257,7 +259,7 @@ export function OptInModal({ onClose }: OptInModalProps) {
               disabled={busy}
               className={buttonClass + ' w-full border'}
               style={{ color: 'var(--color-text)', borderColor: 'var(--color-border)' }}
-            >Continue without sharing</button>
+            >{t('optInModal.continueWithoutSharing')}</button>
           </div>
         )}
       </div>

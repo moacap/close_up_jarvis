@@ -7,6 +7,7 @@ import {
   FolderOpen,
   Loader2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { SOURCE_CATALOG } from '../../types/connectors';
 import { connectSource, getConnector } from '../../lib/connectors-api';
 import { getBase } from '../../lib/api';
@@ -92,18 +93,19 @@ function FilesystemPanel({
   onSkip: () => void;
   isConnecting: boolean;
 }) {
+  const { t } = useTranslation();
   const [path, setPath] = useState('');
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-        Enter the path to your local {displayName} folder.
+        {t('setup.sourceConnectFlow.filesystem.prompt', { displayName })}
       </p>
       <div className="flex gap-2">
         <input
           type="text"
           value={path}
           onChange={(e) => setPath(e.target.value)}
-          placeholder="/Users/you/Documents/..."
+          placeholder={t('setup.sourceConnectFlow.filesystem.pathPlaceholder')}
           className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
           style={{
             background: 'var(--color-surface)',
@@ -122,7 +124,7 @@ function FilesystemPanel({
           }}
         >
           {isConnecting ? <Loader2 size={14} className="animate-spin" /> : <FolderOpen size={14} />}
-          Connect
+          {t('setup.sourceConnectFlow.connect')}
         </button>
       </div>
       <button
@@ -130,7 +132,7 @@ function FilesystemPanel({
         className="text-xs self-start"
         style={{ color: 'var(--color-text-tertiary)' }}
       >
-        Skip for now
+        {t('setup.sourceConnectFlow.skipForNow')}
       </button>
     </div>
   );
@@ -151,6 +153,7 @@ function OAuthPanel({
   onSkip: () => void;
   isConnecting: boolean;
 }) {
+  const { t } = useTranslation();
   const [waiting, setWaiting] = useState(false);
 
   const startOAuth = () => {
@@ -184,13 +187,13 @@ function OAuthPanel({
     <div className="flex flex-col gap-4">
       <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
         {waiting
-          ? `Waiting for ${displayName} authorization... Complete it in the browser window.`
-          : `Connect your ${displayName} account with one click.`}
+          ? t('setup.sourceConnectFlow.oauth.waitingForAuth', { displayName })
+          : t('setup.sourceConnectFlow.oauth.connectPrompt', { displayName })}
       </p>
       {waiting ? (
         <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-accent)' }}>
           <Loader2 size={16} className="animate-spin" />
-          Waiting for authorization...
+          {t('setup.sourceConnectFlow.oauth.waitingShort')}
         </div>
       ) : (
         <button
@@ -202,7 +205,7 @@ function OAuthPanel({
           }}
         >
           <ExternalLink size={14} />
-          Connect {displayName}
+          {t('setup.sourceConnectFlow.oauth.connectButton', { displayName })}
         </button>
       )}
       <button
@@ -210,7 +213,7 @@ function OAuthPanel({
         className="text-xs self-start"
         style={{ color: 'var(--color-text-tertiary)' }}
       >
-        Skip for now
+        {t('setup.sourceConnectFlow.skipForNow')}
       </button>
     </div>
   );
@@ -227,11 +230,11 @@ function LocalPanel({
   onSkip: () => void;
   isConnecting: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-        {displayName} reads data directly from your Mac. Make sure the app is installed and
-        Full Disk Access is granted to OpenJarvis in System Settings.
+        {t('setup.sourceConnectFlow.local.description', { displayName })}
       </p>
       <div
         className="px-4 py-3 rounded-lg text-sm"
@@ -240,8 +243,7 @@ function LocalPanel({
           color: 'var(--color-text-secondary)',
         }}
       >
-        <strong>System Settings</strong> → Privacy &amp; Security → Full Disk Access →
-        enable OpenJarvis
+        <strong>{t('setup.sourceConnectFlow.local.systemSettings')}</strong> {t('setup.sourceConnectFlow.local.fullDiskAccessPath')}
       </div>
       <button
         onClick={() => onConnect({})}
@@ -255,14 +257,14 @@ function LocalPanel({
         }}
       >
         {isConnecting && <Loader2 size={14} className="animate-spin" />}
-        Check Access
+        {t('setup.sourceConnectFlow.local.checkAccess')}
       </button>
       <button
         onClick={onSkip}
         className="text-xs self-start"
         style={{ color: 'var(--color-text-tertiary)' }}
       >
-        Skip for now
+        {t('setup.sourceConnectFlow.skipForNow')}
       </button>
     </div>
   );
@@ -283,6 +285,7 @@ function StepByStepPanel({
   onSkip: () => void;
   isConnecting: boolean;
 }) {
+  const { t } = useTranslation();
   const steps = connector.steps || [];
   const fields = connector.inputFields || [];
   const [inputs, setInputs] = useState<Record<string, string>>(() =>
@@ -354,7 +357,7 @@ function StepByStepPanel({
             color: 'var(--color-accent-purple)', fontSize: 11,
             fontWeight: 600, marginBottom: 4,
           }}>
-            STEP {i + 1}
+            {t('setup.sourceConnectFlow.stepByStep.stepLabel', { number: i + 1 })}
           </div>
           <div style={{
             color: 'var(--color-text)',
@@ -372,7 +375,7 @@ function StepByStepPanel({
                 textDecoration: 'underline',
               }}
             >
-              {step.urlLabel || 'Open'} &rarr;
+              {step.urlLabel || t('setup.sourceConnectFlow.stepByStep.open')} &rarr;
             </a>
           )}
         </div>
@@ -438,7 +441,7 @@ function StepByStepPanel({
         fontSize: 11, color: 'var(--color-text-secondary)',
         marginBottom: 12, textAlign: 'center',
       }}>
-        Read-only access &middot; No data leaves your device
+        {t('setup.sourceConnectFlow.stepByStep.readOnlyNotice')}
       </div>
 
       <div style={{ display: 'flex', gap: 8 }}>
@@ -454,7 +457,9 @@ function StepByStepPanel({
             cursor: 'pointer',
           }}
         >
-          {isConnecting ? 'Connecting...' : `Connect ${connector.display_name}`}
+          {isConnecting
+            ? t('setup.sourceConnectFlow.stepByStep.connecting')
+            : t('setup.sourceConnectFlow.stepByStep.connectButton', { displayName: connector.display_name })}
         </button>
         <button
           onClick={onSkip}
@@ -467,7 +472,7 @@ function StepByStepPanel({
             cursor: 'pointer',
           }}
         >
-          Skip
+          {t('setup.sourceConnectFlow.stepByStep.skip')}
         </button>
       </div>
     </div>
@@ -485,6 +490,7 @@ export function SourceConnectFlow({
   selectedIds: string[];
   onComplete: () => void;
 }) {
+  const { t } = useTranslation();
   const [entries, setEntries] = useState<SourceEntry[]>(() =>
     selectedIds.map((id) => ({ id, state: 'pending' as SourceState })),
   );
@@ -534,7 +540,7 @@ export function SourceConnectFlow({
       <div className="w-48 shrink-0 flex flex-col gap-1 py-1">
         <p className="text-xs font-semibold uppercase tracking-wider mb-2"
           style={{ color: 'var(--color-text-tertiary)' }}>
-          Sources
+          {t('setup.sourceConnectFlow.sidebarTitle')}
         </p>
         {entries.map((entry, idx) => {
           const card = SOURCE_CATALOG.find((c) => c.connector_id === entry.id);
@@ -579,7 +585,7 @@ export function SourceConnectFlow({
               <div className="flex items-center gap-2 text-sm"
                 style={{ color: 'var(--color-accent)' }}>
                 <CheckCircle2 size={18} />
-                Connected
+                {t('setup.sourceConnectFlow.connected')}
               </div>
             ) : activeCard.steps ? (
               <StepByStepPanel
@@ -618,7 +624,7 @@ export function SourceConnectFlow({
           <div className="flex flex-col items-center justify-center flex-1 gap-3">
             <CheckCircle2 size={32} style={{ color: 'var(--color-accent)' }} />
             <p className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>
-              All sources configured
+              {t('setup.sourceConnectFlow.allConfigured')}
             </p>
           </div>
         )}
@@ -630,7 +636,7 @@ export function SourceConnectFlow({
               className="w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all"
               style={{ background: 'var(--color-accent)', color: 'var(--color-on-accent)' }}
             >
-              Continue →
+              {t('setup.sourceConnectFlow.continue')}
             </button>
           </div>
         )}
