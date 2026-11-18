@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
@@ -177,20 +178,39 @@ export function MessageBubble({ message, isLive = false }: Props) {
       {message.audio?.url && <AudioPlayer src={message.audio.url} />}
 
       {/* Assistant message */}
-      {cleanContent && (
-        <div className="prose max-w-none">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={rehypePlugins}
-            components={{
-              ...autoDirComponents,
-              pre: CodeBlockPre,
-            }}
-          >
-            {cleanContent}
-          </ReactMarkdown>
-        </div>
-      )}
+      {cleanContent && (() => {
+        const trimmed = cleanContent.trim();
+        const fencedHtml = trimmed.match(/^```html\s*\n([\s\S]*?)\n```$/i);
+        const rawHtmlCandidate = fencedHtml ? fencedHtml[1].trim() : trimmed;
+        const looksLikeHtml =
+          Boolean(fencedHtml) ||
+          /^(?:<!doctype\s+html|<html\b|<table\b|<div\b|<section\b|<article\b|<ul\b|<ol\b|<h[1-6]\b)/i.test(
+            rawHtmlCandidate,
+          );
+        if (looksLikeHtml && /<\/[a-z][a-z0-9]*>/i.test(rawHtmlCandidate)) {
+          const safeHtml = DOMPurify.sanitize(rawHtmlCandidate);
+          return (
+            <div
+              className="prose max-w-none overflow-x-auto [&_table]:w-full [&_table]:border-collapse [&_th]:text-left [&_th]:px-3 [&_th]:py-2 [&_th]:text-xs [&_th]:font-semibold [&_th]:border [&_th]:border-[var(--color-border)] [&_th]:bg-[var(--color-bg-secondary)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-xs [&_td]:border [&_td]:border-[var(--color-border)]"
+              dangerouslySetInnerHTML={{ __html: safeHtml }}
+            />
+          );
+        }
+        return (
+          <div className="prose max-w-none">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={rehypePlugins}
+              components={{
+                ...autoDirComponents,
+                pre: CodeBlockPre,
+              }}
+            >
+              {cleanContent}
+            </ReactMarkdown>
+          </div>
+        );
+      })()}
 
       {/* Footer: copy + read aloud + x-ray */}
       <div className="flex items-center gap-2 mt-1.5">
