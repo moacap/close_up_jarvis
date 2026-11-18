@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { synthesizeSpeech, fetchTtsHealth } from './api';
+import { useAppStore } from './store';
 import { toSpeakableText } from './message-text';
 
 export type TtsState = 'idle' | 'loading' | 'speaking';
@@ -113,7 +114,12 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
     controller = ac;
 
     try {
-      const blob = await synthesizeSpeech(trimmed, { signal: ac.signal });
+      const { ttsVoice, ttsLanguage } = useAppStore.getState().settings;
+      const blob = await synthesizeSpeech(trimmed, {
+        voiceId: ttsVoice || undefined,
+        language: ttsLanguage || undefined,
+        signal: ac.signal,
+      });
       if (mine !== token) return;
 
       const url = URL.createObjectURL(blob);

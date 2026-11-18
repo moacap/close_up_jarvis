@@ -614,6 +614,33 @@ def create_connectors_router():
                     )
                 instance.configure(feeds)
 
+            elif connector_id == "sales_farma":
+                url = (req.config or {}).get(
+                    "url",
+                    "https://demo.salesfarma.com.br/sincronia/api/omni/agent",
+                )
+                if not isinstance(url, str) or not url.strip():
+                    raise HTTPException(
+                        status_code=400, detail="Sales Farma API URL is required"
+                    )
+                instance.configure(url=url, token=req.token)
+
+            elif connector_id == "coachingqi_visits":
+                url = (req.config or {}).get(
+                    "url",
+                    "https://cupomnichannel.close-upinternational.com/targetai",
+                )
+                tenant = (req.config or {}).get("tenant", "achehomolog")
+                if not isinstance(url, str) or not url.strip():
+                    raise HTTPException(
+                        status_code=400, detail="CoachingQI URL is required"
+                    )
+                instance.configure(
+                    url=url,
+                    tenant=str(tenant or "achehomolog"),
+                    token=req.token,
+                )
+
             else:
                 # Generic: try to store token or credentials if the instance
                 # exposes the relevant attributes.
@@ -641,6 +668,19 @@ def create_connectors_router():
             "status": "connected" if instance.is_connected() else "pending",
             "sync_status": sync_status,
         }
+
+    @router.post("/coachingqi_visits/ingest")
+    async def ingest_coachingqi_visits(request: Request):
+        """Webhook endpoint to ingest one or more visit payloads into KnowledgeStore."""
+        from openjarvis.connectors.coachingqi_visits import ingest_visit_records
+
+        body = await request.json()
+        items = body if isinstance(body, list) else [body]
+        valid = [item for item in items if isinstance(item, dict)]
+        if not valid:
+            raise HTTPException(status_code=400, detail="Visit JSON object or array is required")
+
+        return await asyncio.to_thread(ingest_visit_records, valid)
 
     @router.post("/{connector_id}/disconnect")
     @_serialized_async

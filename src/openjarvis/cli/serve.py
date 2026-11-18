@@ -26,7 +26,19 @@ from openjarvis.intelligence import (
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_TOOLS = frozenset({"think", "calculator", "web_search"})
+_DEFAULT_TOOLS = frozenset(
+    {
+        "think",
+        "calculator",
+        "web_search",
+        "knowledge_search",
+        "visit_ingest",
+        "file_read",
+        "file_write",
+        "shell_exec",
+        "code_interpreter",
+    }
+)
 
 
 def _resolve_server_cors_origins(configured: object) -> list[str]:
@@ -259,6 +271,17 @@ def serve(
         except Exception as exc:
             logger.debug("Telemetry store init failed: %s", exc)
 
+    # Load persisted cloud keys (~/.openjarvis/cloud-keys.env) before engine
+    # discovery so cloud providers (including Azure OpenAI) are available on boot.
+    try:
+        from openjarvis.server.cloud_router import _load_keys as _load_cloud_keys
+
+        for _k, _v in _load_cloud_keys().items():
+            if _v:
+                os.environ.setdefault(_k, _v)
+    except Exception:
+        pass
+
     # Select with the model we'll actually serve so an engine that can't
     # serve it (e.g. the cloud fallback without the matching provider key) is
     # skipped rather than chosen and failing per-request later (see #532).
@@ -284,6 +307,17 @@ def serve(
     # If cloud API keys are set, prepare a cloud engine. We build the
     # MultiEngine after local discovery so healthy local fallbacks such as
     # Ollama stay visible even when the configured preferred engine is MLX.
+    # Load persisted cloud keys (~/.openjarvis/cloud-keys.env) so cloud
+    # providers (including Azure OpenAI) are active on server startup.
+    try:
+        from openjarvis.server.cloud_router import _load_keys as _load_cloud_keys
+
+        for _k, _v in _load_cloud_keys().items():
+            if _v:
+                os.environ.setdefault(_k, _v)
+    except Exception:
+        pass
+
     cloud_engine = None
     _has_cloud = (
         os.environ.get("OPENAI_API_KEY")
@@ -291,6 +325,9 @@ def serve(
         or os.environ.get("GEMINI_API_KEY")
         or os.environ.get("GOOGLE_API_KEY")
         or os.environ.get("OPENROUTER_API_KEY")
+        or os.environ.get("ATLASCLOUD_API_KEY")
+        or os.environ.get("MINIMAX_API_KEY")
+        or (os.environ.get("AZURE_OPENAI_API_KEY") and os.environ.get("AZURE_OPENAI_ENDPOINT"))
     )
     if _has_cloud and engine_name != "cloud":
         try:
@@ -470,10 +507,35 @@ def serve(
                     "prompt_builder"
                     in _inspect.signature(agent_cls.__init__).parameters
                 ):
+                    from openjarvis.core.paths import get_config_dir
                     from openjarvis.prompt.builder import SystemPromptBuilder
 
+                    scripts_dir = get_config_dir() / "scripts"
+                    custom_scripts_note = (
+                        f"\n\nCustomizable Python scripts: when the user asks to create "
+                        f"a customizable Python script, save it under {scripts_dir}/<name>.py "
+                        f"using file_write (create_dirs=True), test it with shell_exec, and "
+                        f"tell the user they can run it anytime in chat via @<name> "
+                        f"(or list all scripts via @scripts). "
+                        f"Every script in {scripts_dir}/<name>.py is ALSO automatically exposed "
+                        f"as a live REST API on the main server at:\n"
+                        f"- JSON: http://localhost:8180/v1/scripts/<name>/run (GET with query params "
+                        f"matching the script's --flags, e.g. ?texto=sales&com-cargo=true, "
+                        f"or POST with {{\"args\": \"--flag valor\"}})\n"
+                        f"- HTML report (with PDF/HTML/Email export): http://localhost:8180/v1/scripts/<name>/html "
+                        f"(or /v1/scripts/<name>/run?format=html)\n"
+                        f"- Interactive API docs: http://localhost:8180/v1/scripts/<name>/docs\n"
+                        f"When the user asks for an API endpoint, HTML report links, or curl examples "
+                        f"for a script, ALWAYS read {scripts_dir}/<name>.py first with file_read to see "
+                        f"its exact argparse flags and real data, do NOT create a separate server on "
+                        f"another port, do NOT write raw IPv4 addresses like 127.0.0.1 (which get redacted), "
+                        f"ALWAYS format links in Markdown ([Label](http://localhost:8180/...)) instead of "
+                        f"raw <a> HTML tags, and ALWAYS give directly runnable URLs/curl examples using "
+                        f"the script's real parameters."
+                    )
+                    base_template = (config.agent.default_system_prompt or "") + custom_scripts_note
                     agent_kwargs["prompt_builder"] = SystemPromptBuilder(
-                        agent_template=config.agent.default_system_prompt or "",
+                        agent_template=base_template,
                         memory_files_config=config.memory_files,
                         system_prompt_config=config.system_prompt,
                     )

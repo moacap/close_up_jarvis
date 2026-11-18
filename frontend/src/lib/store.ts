@@ -109,6 +109,8 @@ interface Settings {
   speechEnabled: boolean;
   voiceOutputEnabled: boolean;
   voiceAutoplay: boolean;
+  ttsVoice: string;
+  ttsLanguage: string;
   // IANA time zone for dates in answers; '' = this device's zone.
   timeZone: string;
   // UI display language and the language the assistant replies in.
@@ -128,6 +130,8 @@ function loadSettings(): Settings {
     speechEnabled: false,
     voiceOutputEnabled: false,
     voiceAutoplay: false,
+    ttsVoice: '',
+    ttsLanguage: '',
     timeZone: '',
     language: i18n.language as Language,
   };

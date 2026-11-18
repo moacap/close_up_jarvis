@@ -472,12 +472,19 @@ class OrchestratorAgent(ToolUsingAgent):
                     },
                 )
 
-            # Build ToolCall objects from raw dicts
+            # Build ToolCall objects from raw dicts (supports both flat and
+            # OpenAI nested {"function": {"name", "arguments"}} formats).
             tool_calls = [
                 ToolCall(
                     id=tc.get("id", f"call_{i}"),
-                    name=tc.get("name", ""),
-                    arguments=tc.get("arguments", "{}"),
+                    name=(
+                        tc.get("name")
+                        or (tc.get("function") or {}).get("name", "")
+                    ),
+                    arguments=(
+                        tc.get("arguments")
+                        or (tc.get("function") or {}).get("arguments", "{}")
+                    ),
                 )
                 for i, tc in enumerate(raw_tool_calls)
             ]

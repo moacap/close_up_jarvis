@@ -142,3 +142,13 @@ try:
     import openjarvis.connectors.news_rss  # noqa: F401
 except ImportError:
     pass
+
+try:
+    import openjarvis.connectors.sales_farma  # noqa: F401
+except ImportError:
+    pass
+
+try:
+    import openjarvis.connectors.coachingqi_visits  # noqa: F401
+except ImportError:
+    pass

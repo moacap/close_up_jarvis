@@ -48,6 +48,7 @@ _BUILTIN_TOOL_MODULES = (
     "knowledge_sql",
     "apple_calendar",
     "knowledge_search",
+    "visit_ingest",
     "browser",
     "browser_axtree",
     "proactive_tools",

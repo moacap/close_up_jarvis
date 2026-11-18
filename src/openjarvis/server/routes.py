@@ -155,9 +155,938 @@ def _ensure_identity_prompt(messages: list[Message], app_config) -> list[Message
     return [combined_system, *non_system_messages]
 
 
+def _scripts_dir():
+    """Return the directory where customizable slash-command scripts live."""
+    from openjarvis.core.paths import get_config_dir
+
+    return get_config_dir() / "scripts"
+
+
+def _is_valid_script_name(name: str) -> bool:
+    import re
+
+    return bool(re.fullmatch(r"[A-Za-z0-9_-]+", name))
+
+
+def _extract_script_params(script_path) -> list[dict[str, str]]:
+    """Extract ``--flag`` options and help strings from ``argparse`` calls via AST."""
+    import ast
+
+    params: list[dict[str, str]] = []
+    seen: set[str] = set()
+    try:
+        tree = ast.parse(script_path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            is_add_arg = (
+                isinstance(func, ast.Attribute) and func.attr == "add_argument"
+            )
+            if not is_add_arg:
+                continue
+            flags = [
+                arg.value
+                for arg in node.args
+                if isinstance(arg, ast.Constant)
+                and isinstance(arg.value, str)
+                and arg.value.startswith("--")
+            ]
+            help_text = ""
+            for kw in node.keywords:
+                if (
+                    kw.arg == "help"
+                    and isinstance(kw.value, ast.Constant)
+                    and isinstance(kw.value.value, str)
+                ):
+                    help_text = kw.value.value
+                    break
+            for flag in flags:
+                if flag not in seen:
+                    seen.add(flag)
+                    params.append({"flag": flag, "help": help_text})
+    except Exception:
+        pass
+    if "--help" not in seen:
+        params.append({"flag": "--help", "help": "Mostrar ajuda e parâmetros do script"})
+    return params
+
+
+def _list_custom_scripts() -> list[dict[str, Any]]:
+    sdir = _scripts_dir()
+    if not sdir.exists():
+        return []
+    items = []
+    for p in sorted(sdir.glob("*.py")):
+        if _is_valid_script_name(p.stem):
+            stat = p.stat()
+            items.append(
+                {
+                    "name": p.stem,
+                    "command": f"@{p.stem}",
+                    "path": str(p),
+                    "size_bytes": stat.st_size,
+                    "params": _extract_script_params(p),
+                }
+            )
+    return items
+
+
+def _execute_custom_script(name: str, args_str: str = "") -> dict[str, Any]:
+    """Execute ``~/.openjarvis/scripts/<name>.py`` with optional CLI args."""
+    import shlex
+    import subprocess
+    import sys
+
+    if not _is_valid_script_name(name):
+        raise HTTPException(status_code=400, detail="Invalid script name")
+    script_path = _scripts_dir() / f"{name}.py"
+    if not script_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Script '@{name}' not found")
+
+    cmd = [sys.executable, str(script_path)]
+    if args_str.strip():
+        cmd.extend(shlex.split(args_str))
+
+    proc = subprocess.run(
+        cmd,
+        cwd=str(_scripts_dir()),
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    return {
+        "name": name,
+        "exit_code": proc.returncode,
+        "stdout": proc.stdout,
+        "stderr": proc.stderr,
+    }
+
+
+def _format_script_reply(res: dict[str, Any]) -> str:
+    out = (res.get("stdout") or "").strip()
+    err = (res.get("stderr") or "").strip()
+    code = res.get("exit_code", 0)
+    name = res["name"]
+
+    if code != 0:
+        parts = [f"Não consegui executar **@{name}** corretamente (código `{code}`)."]
+        if err:
+            parts.append(f"Detalhes do erro:\n```\n{err}\n```")
+        elif out:
+            parts.append(f"Saída:\n```\n{out}\n```")
+        return "\n\n".join(parts)
+
+    if not out:
+        return f"Pronto! **@{name}** foi executado com sucesso."
+
+    lines = [line.strip() for line in out.splitlines() if line.strip()]
+    if out.startswith(("{", "[")):
+        body = f"```json\n{out}\n```"
+    elif len(lines) == 1:
+        body = lines[0]
+    else:
+        body = "\n".join(f"- {line}" for line in lines)
+
+    parts = [f"Aqui está o resultado de **@{name}** ({len(lines)} {'registro' if len(lines) == 1 else 'registros'}):", body]
+    if err:
+        parts.append(f"Observação:\n```\n{err}\n```")
+    return "\n\n".join(parts)
+
+
+async def _maybe_handle_slash_script(request_body: ChatCompletionRequest):
+    """Handle ``@scripts`` / ``@<nome>`` direct calls, or enrich inline ``@<nome>`` refs."""
+    last_user = ""
+    last_user_idx = -1
+    for idx in range(len(request_body.messages) - 1, -1, -1):
+        m = request_body.messages[idx]
+        if m.role == "user" and m.content:
+            last_user = m.content.strip()
+            last_user_idx = idx
+            break
+    if not last_user:
+        return None
+
+    # Case 1: message starts with @scripts or @<script> -> run directly.
+    if last_user.startswith("@"):
+        parts = last_user.split(None, 1)
+        cmd = parts[0]
+        args_str = parts[1] if len(parts) > 1 else ""
+        name = cmd[1:]
+
+        if cmd == "@scripts":
+            scripts = _list_custom_scripts()
+            if not scripts:
+                reply_text = (
+                    "Nenhum script customizável encontrado em `~/.openjarvis/scripts/`.\n\n"
+                    "Peça no chat para criar um script Python (ex.: *\"Crie um script chamado `meu_script` que ...\"*) "
+                    "e depois execute com `@meu_script`."
+                )
+            else:
+                lines = ["**Scripts customizáveis disponíveis:**"]
+                for s in scripts:
+                    lines.append(f"- `{s['command']}` (`{s['path']}`)")
+                reply_text = "\n".join(lines)
+        elif _is_valid_script_name(name) and (_scripts_dir() / f"{name}.py").is_file():
+            res = await asyncio.to_thread(_execute_custom_script, name, args_str)
+            reply_text = _format_script_reply(res)
+        else:
+            return None
+
+        chunk_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
+        model = request_body.model
+        if request_body.stream:
+            async def _stream_reply():
+                first = ChatCompletionChunk(
+                    id=chunk_id,
+                    model=model,
+                    choices=[StreamChoice(delta=DeltaMessage(role="assistant"))],
+                )
+                yield f"data: {first.model_dump_json()}\n\n"
+                content = ChatCompletionChunk(
+                    id=chunk_id,
+                    model=model,
+                    choices=[StreamChoice(delta=DeltaMessage(content=reply_text))],
+                )
+                yield f"data: {content.model_dump_json()}\n\n"
+                done = ChatCompletionChunk(
+                    id=chunk_id,
+                    model=model,
+                    choices=[StreamChoice(delta=DeltaMessage(), finish_reason="stop")],
+                )
+                yield f"data: {done.model_dump_json()}\n\n"
+                yield "data: [DONE]\n\n"
+
+            return StreamingResponse(
+                _stream_reply(),
+                media_type="text/event-stream",
+                headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+            )
+
+        return ChatCompletionResponse(
+            id=chunk_id,
+            model=model,
+            choices=[
+                Choice(
+                    message=ChoiceMessage(role="assistant", content=reply_text),
+                    finish_reason="stop",
+                )
+            ],
+        )
+
+    # Case 2: inline @<script> [args...] inside a natural-language prompt.
+    # Execute the referenced script and attach its output so the LLM formats it.
+    import re
+
+    match = re.search(r"@([A-Za-z0-9_-]+)(.*)$", last_user)
+    if match and last_user_idx >= 0:
+        name = match.group(1)
+        args_str = match.group(2).strip()
+        if _is_valid_script_name(name) and (_scripts_dir() / f"{name}.py").is_file():
+            res = await asyncio.to_thread(_execute_custom_script, name, args_str)
+            formatted = _format_script_reply(res)
+            request_body.messages[last_user_idx].content = (
+                f"{last_user}\n\n[Resultado real da execução de @{name}]:\n{formatted}"
+            )
+    return None
+
+
+@router.post("/targetqi/visit-record")
+@router.post("/api/v1/targetqi/visit-record")
+async def ingest_targetqi_visit_record(request: Request):
+    """Ingest a CoachingQI/TargetQI visit record payload into KnowledgeStore."""
+    from openjarvis.connectors.coachingqi_visits import ingest_visit_records
+
+    body = await request.json()
+    items = body if isinstance(body, list) else [body]
+    valid = [item for item in items if isinstance(item, dict)]
+    if not valid:
+        raise HTTPException(status_code=400, detail="Visit JSON object or array is required")
+    return await asyncio.to_thread(ingest_visit_records, valid)
+
+
+@router.get("/v1/scripts")
+async def list_scripts_endpoint():
+    """List customizable Python scripts in ``~/.openjarvis/scripts/``."""
+    return {"scripts": _list_custom_scripts()}
+
+
+def _build_scripts_openapi_schema(request: Request, only_name: str | None = None) -> dict[str, Any]:
+    """Build OpenAPI 3.1 schema for all scripts or a single named script."""
+    scripts = _list_custom_scripts()
+    if only_name is not None:
+        clean = only_name.strip().lstrip("@/")
+        scripts = [s for s in scripts if s["name"] == clean]
+        if not scripts:
+            raise HTTPException(status_code=404, detail=f"Script '@{clean}' not found")
+    paths: dict[str, Any] = {}
+    if only_name is None:
+        paths["/v1/scripts"] = {
+            "get": {
+                "tags": ["Scripts"],
+                "summary": "Listar scripts customizáveis",
+                "responses": {"200": {"description": "Lista de scripts e parâmetros"}},
+            }
+        }
+    for s in scripts:
+        name = s["name"]
+        params_spec = [
+            {
+                "name": p["flag"].lstrip("-"),
+                "in": "query",
+                "required": False,
+                "description": p.get("help") or f"Parâmetro {p['flag']}",
+                "schema": {"type": "string"},
+            }
+            for p in s.get("params", [])
+            if p.get("flag") != "--help"
+        ]
+        params_spec.append(
+            {
+                "name": "args",
+                "in": "query",
+                "required": False,
+                "description": "Argumentos CLI completos (ex.: --texto sales --com-cargo)",
+                "schema": {"type": "string"},
+            }
+        )
+        paths[f"/v1/scripts/{name}/run"] = {
+            "get": {
+                "tags": [name],
+                "summary": f"Executar {name} (GET)",
+                "parameters": params_spec,
+                "responses": {
+                    "200": {
+                        "description": "Resultado JSON com o campo data",
+                    }
+                },
+            },
+            "post": {
+                "tags": [name],
+                "summary": f"Executar {name} (POST)",
+                "requestBody": {
+                    "required": False,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "args": {
+                                        "type": "string",
+                                        "example": "--texto sales",
+                                    }
+                                },
+                            }
+                        }
+                    },
+                },
+                "responses": {
+                    "200": {
+                        "description": "Resultado JSON com o campo data",
+                    }
+                },
+            },
+        }
+    title = (
+        f"Close-UP — API do Script {only_name}"
+        if only_name
+        else "Close-UP — Scripts Customizáveis API"
+    )
+    return {
+        "openapi": "3.1.0",
+        "info": {
+            "title": title,
+            "version": "1.0.0",
+            "description": "Documentação específica dos endpoints gerados para os scripts em ~/.openjarvis/scripts/.",
+        },
+        "servers": [{"url": str(request.base_url).rstrip("/")}],
+        "paths": paths,
+    }
+
+
+@router.get("/v1/scripts/openapi.json", include_in_schema=False)
+async def scripts_openapi_schema(request: Request):
+    """Dynamic OpenAPI schema dedicated specifically to customizable script APIs."""
+    return _build_scripts_openapi_schema(request)
+
+
+@router.get("/v1/scripts/{name}/openapi.json", include_in_schema=False)
+async def single_script_openapi_schema(name: str, request: Request):
+    """Dynamic OpenAPI schema for a single customizable script."""
+    return _build_scripts_openapi_schema(request, only_name=name)
+
+
+def _render_scripts_docs_html(only_name: str | None = None) -> str:
+    import json as _json
+
+    title = (
+        f"Close-UP — API do Script {only_name}"
+        if only_name
+        else "Close-UP — Scripts Customizáveis API Docs"
+    )
+    heading = (
+        f"API do Script — <code>{only_name}</code>"
+        if only_name
+        else "Scripts Customizáveis — API Docs"
+    )
+    openapi_href = (
+        f"/v1/scripts/{only_name}/openapi.json"
+        if only_name
+        else "/v1/scripts/openapi.json"
+    )
+    only_json = _json.dumps(only_name)
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  <style>
+    :root {{ --bg:#0f1117; --card:#171a23; --border:#2a2f3d; --text:#e6e8ef; --muted:#9aa3b2; --accent:#6366f1; --get:#10b981; --post:#3b82f6; }}
+    * {{ box-sizing: border-box; }}
+    body {{ margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); padding:28px 20px; }}
+    .wrap {{ max-width: 960px; margin: 0 auto; }}
+    h1 {{ font-size: 22px; margin: 0 0 6px; }}
+    .sub {{ color: var(--muted); font-size: 13px; margin-bottom: 22px; }}
+    .sub a {{ color: #818cf8; text-decoration: none; }}
+    .card {{ background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 18px; overflow: hidden; }}
+    .card-hd {{ padding: 14px 18px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }}
+    .card-title {{ font-weight: 600; font-size: 15px; font-family: ui-monospace, monospace; }}
+    .card-body {{ padding: 16px 18px; }}
+    .ep {{ display:flex; align-items:center; gap:10px; margin-bottom: 14px; font-family: ui-monospace, monospace; font-size: 13px; }}
+    .badge {{ padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 11px; color: #fff; }}
+    .badge.get {{ background: var(--get); }}
+    .badge.post {{ background: var(--post); }}
+    .params {{ display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-bottom: 14px; }}
+    .field label {{ display:block; font-size: 11px; color: var(--muted); margin-bottom: 4px; font-family: ui-monospace, monospace; }}
+    .field input {{ width:100%; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; font-family: ui-monospace, monospace; }}
+    .hint {{ font-size: 11px; color: var(--muted); margin-top: 3px; }}
+    .actions {{ display:flex; gap: 8px; flex-wrap: wrap; align-items: center; }}
+    button {{ padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; }}
+    .btn-primary {{ background: var(--accent); color: #fff; }}
+    .btn-sec {{ background: #232837; color: var(--text); border: 1px solid var(--border); }}
+    pre {{ background: #0b0d12; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 12px; overflow-x: auto; margin: 12px 0 0; line-height: 1.45; }}
+    .curl-box {{ color: #a5b4fc; }}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>{heading}</h1>
+    <div class="sub">
+      Documentação interativa ·
+      <a href="{openapi_href}" target="_blank">OpenAPI JSON</a>
+      {" · <a href='/v1/scripts/docs'>Ver todos os scripts</a>" if only_name else ""}
+    </div>
+    <div id="app">Carregando scripts...</div>
+  </div>
+  <script>
+    const ONLY_NAME = {only_json};
+    async function load() {{
+      const res = await fetch('/v1/scripts');
+      const json = await res.json();
+      let scripts = json.scripts || [];
+      if (ONLY_NAME) scripts = scripts.filter(s => s.name === ONLY_NAME);
+      const app = document.getElementById('app');
+      if (!scripts.length) {{
+        app.innerHTML = '<div class="card"><div class="card-body">Script não encontrado em ~/.openjarvis/scripts/.</div></div>';
+        return;
+      }}
+      app.innerHTML = '';
+      for (const s of scripts) {{
+        const card = document.createElement('div');
+        card.className = 'card';
+        const params = (s.params || []).filter(p => p.flag !== '--help');
+        const guessPlaceholder = (key, helpText) => {{
+          const m = (helpText || '').match(/(?:por exemplo|exemplo|ex\.?)\s*:\s*([^\\r\\n,;]+)/i);
+          if (m && m[1]) return `ex: ${{m[1].trim()}}`;
+          if (key.startsWith('com-') || key.startsWith('sem-') || key.startsWith('no-')) return 'ex: true';
+          if (key === 'texto') return 'ex: sales';
+          if (key === 'cargo') return 'ex: PROPAGANDISTA MEDICO (REP)';
+          return `ex: valor para ${{key}}`;
+        }};
+        const fieldsHtml = params.map(p => {{
+          const key = p.flag.replace(/^--/, '');
+          const ph = guessPlaceholder(key, p.help);
+          return `<div class="field">
+            <label>${{key}}</label>
+            <input type="text" data-param="${{key}}" placeholder="${{ph}}" />
+            <div class="hint">${{p.help || ''}}</div>
+          </div>`;
+        }}).join('') + `<div class="field">
+          <label>args (opcional)</label>
+          <input type="text" data-param="args" placeholder="ex: --texto sales --com-cargo" />
+          <div class="hint">Argumentos CLI diretos</div>
+        </div>`;
+
+        card.innerHTML = `
+          <div class="card-hd">
+            <span class="card-title">${{s.name}}</span>
+            <a href="/v1/scripts/${{s.name}}/docs" style="font-size:12px;color:#818cf8;text-decoration:none">${{s.command}}</a>
+          </div>
+          <div class="card-body">
+            <div class="ep"><span class="badge get">GET</span><span>/v1/scripts/${{s.name}}/run</span></div>
+            <div class="ep"><span class="badge post">POST</span><span>/v1/scripts/${{s.name}}/run</span></div>
+            <div class="params">${{fieldsHtml}}</div>
+            <div class="actions">
+              <button class="btn-primary" data-run="get">Executar GET</button>
+              <button class="btn-sec" data-run="post">Executar POST</button>
+              <button class="btn-sec" data-run="html">Abrir HTML</button>
+              <button class="btn-sec" data-copy>Copiar curl</button>
+            </div>
+            <pre class="curl-box" data-curl></pre>
+            <pre data-out style="display:none"></pre>
+          </div>`;
+
+        const buildUrl = () => {{
+          const qs = new URLSearchParams();
+          card.querySelectorAll('input[data-param]').forEach(inp => {{
+            const val = inp.value.trim();
+            if (val) qs.set(inp.dataset.param, val);
+          }});
+          const q = qs.toString();
+          return `${{location.origin}}/v1/scripts/${{s.name}}/run${{q ? '?' + q : ''}}`;
+        }};
+
+        const updateCurl = () => {{
+          card.querySelector('[data-curl]').textContent = `curl -s "${{buildUrl()}}"`;
+        }};
+        card.querySelectorAll('input').forEach(inp => inp.addEventListener('input', updateCurl));
+        updateCurl();
+
+        card.querySelector('[data-run="get"]').addEventListener('click', async () => {{
+          const out = card.querySelector('[data-out]');
+          out.style.display = 'block';
+          out.textContent = 'Executando...';
+          const r = await fetch(buildUrl());
+          const data = await r.json();
+          out.textContent = JSON.stringify(data, null, 2);
+        }});
+
+        card.querySelector('[data-run="post"]').addEventListener('click', async () => {{
+          const out = card.querySelector('[data-out]');
+          out.style.display = 'block';
+          out.textContent = 'Executando...';
+          const parts = [];
+          card.querySelectorAll('input[data-param]').forEach(inp => {{
+            const k = inp.dataset.param;
+            const v = inp.value.trim();
+            if (!v) return;
+            if (k === 'args') parts.push(v);
+            else if (v === 'true') parts.push(`--${{k}}`);
+            else parts.push(`--${{k}} "${{v}}"`);
+          }});
+          const r = await fetch(`/v1/scripts/${{s.name}}/run`, {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify({{ args: parts.join(' ') }}),
+          }});
+          const data = await r.json();
+          out.textContent = JSON.stringify(data, null, 2);
+        }});
+
+        card.querySelector('[data-run="html"]').addEventListener('click', () => {{
+          const url = buildUrl();
+          const sep = url.includes('?') ? '&' : '?';
+          window.open(`${{url}}${{sep}}format=html`, '_blank');
+        }});
+
+        card.querySelector('[data-copy]').addEventListener('click', () => {{
+          navigator.clipboard?.writeText(card.querySelector('[data-curl]').textContent);
+        }});
+
+        app.appendChild(card);
+      }}
+    }}
+    load();
+  </script>
+</body>
+</html>"""
+
+
+@router.get("/v1/scripts/docs", include_in_schema=False)
+async def scripts_swagger_docs():
+    """Self-contained interactive API docs page for customizable scripts (no external CDN)."""
+    from fastapi.responses import HTMLResponse
+
+    return HTMLResponse(content=_render_scripts_docs_html())
+
+
+@router.get("/v1/scripts/{name}/docs", include_in_schema=False)
+async def single_script_docs(name: str):
+    """Self-contained interactive API docs page for a single script."""
+    from fastapi.responses import HTMLResponse
+
+    clean = name.strip().lstrip("@/")
+    if not _is_valid_script_name(clean) or not (_scripts_dir() / f"{clean}.py").is_file():
+        raise HTTPException(status_code=404, detail=f"Script '@{clean}' not found")
+    return HTMLResponse(content=_render_scripts_docs_html(only_name=clean))
+
+
+def _parse_script_stdout_to_data(stdout: str) -> Any:
+    """Parse script stdout into structured JSON data (parsed JSON or list of lines)."""
+    import json
+
+    stripped = (stdout or "").strip()
+    if not stripped:
+        return []
+    try:
+        parsed = json.loads(stripped)
+        if isinstance(parsed, (list, dict)):
+            return parsed
+    except Exception:
+        pass
+    return [line.strip() for line in stripped.splitlines() if line.strip()]
+
+
+def _format_script_api_response(res: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": res["name"],
+        "exit_code": res["exit_code"],
+        "data": _parse_script_stdout_to_data(res.get("stdout", "")),
+        "stderr": res.get("stderr", ""),
+    }
+
+
+def _closeup_logo_data_uri() -> str:
+    """Return the Close-UP logo as a base64 data URI when available."""
+    import base64
+    from pathlib import Path
+
+    logo_path = Path(__file__).resolve().parents[3] / "assets" / "closeup_logo.png"
+    if not logo_path.is_file():
+        return ""
+    encoded = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
+def _render_script_html_output(res: dict[str, Any]) -> str:
+    """Render standardized HTML report for any script's JSON ``data`` output."""
+    import html as _html
+    from datetime import datetime
+
+    payload = _format_script_api_response(res)
+    name = _html.escape(str(payload["name"]))
+    code = int(payload["exit_code"])
+    stderr = _html.escape(str(payload.get("stderr") or ""))
+    data = payload["data"]
+    generated_at = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    rows: list[list[str]] = []
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict):
+                rows.append([str(v) for v in item.values()])
+            else:
+                text = str(item)
+                if " | " in text:
+                    rows.append([part.strip() for part in text.split(" | ")])
+                else:
+                    rows.append([text])
+    elif isinstance(data, dict):
+        for k, v in data.items():
+            rows.append([str(k), str(v)])
+
+    max_cols = max((len(r) for r in rows), default=1)
+    if isinstance(data, list) and data and isinstance(data[0], dict):
+        headers = [str(k) for k in data[0].keys()]
+    elif max_cols == 2:
+        headers = ["Nome", "Cargo / Detalhe"]
+    elif max_cols > 2:
+        headers = [f"Coluna {i + 1}" for i in range(max_cols)]
+    else:
+        headers = ["Resultado"]
+
+    thead = "".join(f"<th>{_html.escape(h)}</th>" for h in ["#", *headers])
+    tbody_parts = []
+    for idx, r in enumerate(rows, start=1):
+        padded = r + [""] * (max_cols - len(r))
+        tds = "".join(f"<td>{_html.escape(c)}</td>" for c in padded)
+        tbody_parts.append(f"<tr><td class='num'>{idx}</td>{tds}</tr>")
+    tbody = "".join(tbody_parts) or (
+        f"<tr><td colspan='{max_cols + 1}' class='empty'>Nenhum registro retornado.</td></tr>"
+    )
+    err_block = (
+        f"<div class='err'><strong>stderr:</strong><pre>{stderr}</pre></div>"
+        if stderr
+        else ""
+    )
+    logo_html = """<svg class='logo' viewBox='0 0 210 56' xmlns='http://www.w3.org/2000/svg' aria-label='Close-UP'>
+      <text x='4' y='38' font-family='Plus Jakarta Sans,system-ui,sans-serif' font-weight='800' font-style='italic' font-size='32' fill='#212129' letter-spacing='-1'>CLOSE</text>
+      <rect x='4' y='44' width='96' height='3' rx='1.5' fill='#aa0012'/>
+      <g transform='translate(152 28) rotate(-14)'>
+        <ellipse cx='0' cy='0' rx='46' ry='22' fill='#aa0012'/>
+        <text x='0' y='10' text-anchor='middle' font-family='Plus Jakarta Sans,system-ui,sans-serif' font-weight='800' font-style='italic' font-size='28' fill='#ffffff'>-UP</text>
+      </g>
+    </svg>"""
+
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relatório — {name}</title>
+  <style>
+    :root {{
+      --cup-brand:#aa0012; --cup-brand-hover:#8a000f; --cup-brand-soft:#fff0f2; --cup-brand-on:#ffffff;
+      --bg:#f8f8fa; --card:#ffffff; --surface-muted:#f3f3f6; --border:#dee0e5; --border-sub:#e8ebed;
+      --text:#212129; --muted:#666b78; --ok-bg:#e8f7ed; --ok:#0a6b2e; --err-bg:#ffe8ed; --err:#ab0012;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{ margin:0; font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); padding:28px 20px; }}
+    .wrap {{ max-width:1040px; margin:0 auto; }}
+    .header {{ background:var(--card); color:var(--text); border:1px solid var(--border); border-top:4px solid var(--cup-brand); border-radius:12px; padding:18px 22px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between; box-shadow:0 1px 3px rgba(33,33,41,0.05); }}
+    .brand-left {{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }}
+    .logo {{ height:38px; width:auto; display:block; }}
+    .title {{ font-size:18px; font-weight:700; margin:0 0 3px; color:var(--text); }}
+    .title code {{ color:var(--cup-brand); background:var(--cup-brand-soft); padding:2px 8px; border-radius:6px; font-size:14px; }}
+    .meta {{ font-size:12px; color:var(--muted); }}
+    .badges {{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }}
+    .badge {{ padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600; background:var(--surface-muted); color:var(--text); border:1px solid var(--border); }}
+    .badge.ok {{ background:var(--ok-bg); color:var(--ok); border-color:transparent; }}
+    .badge.fail {{ background:var(--err-bg); color:var(--err); border-color:transparent; }}
+    .toolbar {{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }}
+    .search {{ flex:1; min-width:220px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--text); font-size:13px; }}
+    .search:focus {{ outline:none; border-color:var(--cup-brand); }}
+    .btn {{ padding:9px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--text); font-size:12px; font-weight:600; cursor:pointer; }}
+    .btn:hover {{ border-color:var(--cup-brand); color:var(--cup-brand); background:var(--cup-brand-soft); }}
+    .btn-brand {{ background:var(--cup-brand); color:var(--cup-brand-on); border-color:var(--cup-brand); }}
+    .btn-brand:hover {{ background:var(--cup-brand-hover); border-color:var(--cup-brand-hover); color:var(--cup-brand-on); }}
+    .table-wrap {{ background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(33,33,41,0.04); }}
+    table {{ width:100%; border-collapse:collapse; font-size:13px; }}
+    th {{ text-align:left; padding:11px 14px; background:var(--surface-muted); color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--border); cursor:pointer; user-select:none; white-space:nowrap; }}
+    th:hover {{ color:var(--cup-brand); background:var(--cup-brand-soft); }}
+    th .sort-ind {{ margin-left:4px; font-size:10px; opacity:0.6; }}
+    th.sorted .sort-ind {{ opacity:1; color:var(--cup-brand); }}
+    td {{ padding:10px 14px; border-bottom:1px solid var(--border-sub); color:var(--text); }}
+    tr:last-child td {{ border-bottom:none; }}
+    tr:hover td {{ background:var(--cup-brand-soft); }}
+    td.num {{ color:var(--muted); width:52px; font-variant-numeric:tabular-nums; }}
+    td.empty {{ text-align:center; color:var(--muted); padding:28px; }}
+    .err {{ margin-top:14px; padding:12px; border-radius:8px; border:1px solid var(--err); background:var(--err-bg); color:var(--err); font-size:12px; }}
+    @media print {{ body {{ background:#fff; padding:0; }} .toolbar {{ display:none; }} .header,.table-wrap {{ box-shadow:none; }} }}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="brand-left">
+        {logo_html}
+        <div>
+          <div class="title">Relatório — <code>@{name}</code></div>
+          <div class="meta">Gerado em {generated_at} · Padrão Close-UP</div>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="badge" id="count-badge">{len(rows)} registro(s)</span>
+      </div>
+    </div>
+    <div class="toolbar">
+      <input id="filter" class="search" type="text" placeholder="Filtrar resultados na tabela..." />
+      <button class="btn btn-brand" onclick="exportPdf()">Exportar PDF</button>
+      <button class="btn" onclick="exportHtml()">Exportar HTML</button>
+      <button class="btn" onclick="exportEmail()">Enviar E-mail</button>
+    </div>
+    <div class="table-wrap">
+      <table id="report-table">
+        <thead><tr>{thead}</tr></thead>
+        <tbody>{tbody}</tbody>
+      </table>
+    </div>
+    {err_block}
+  </div>
+  <script>
+    const SCRIPT_NAME = {repr(str(payload["name"]))};
+    const inp = document.getElementById('filter');
+    const tbody = document.querySelector('#report-table tbody');
+    const badge = document.getElementById('count-badge');
+    const ths = Array.from(document.querySelectorAll('#report-table thead th'));
+    let sortCol = -1;
+    let sortAsc = true;
+
+    ths.forEach((th, idx) => {{
+      const ind = document.createElement('span');
+      ind.className = 'sort-ind';
+      ind.textContent = '⇅';
+      th.appendChild(ind);
+      th.addEventListener('click', () => {{
+        if (sortCol === idx) sortAsc = !sortAsc;
+        else {{ sortCol = idx; sortAsc = true; }}
+        ths.forEach((h, i) => {{
+          h.classList.toggle('sorted', i === sortCol);
+          h.querySelector('.sort-ind').textContent = i === sortCol ? (sortAsc ? '▲' : '▼') : '⇅';
+        }});
+        const trs = Array.from(tbody.querySelectorAll('tr'));
+        trs.sort((a, b) => {{
+          const av = (a.children[idx]?.textContent || '').trim();
+          const bv = (b.children[idx]?.textContent || '').trim();
+          const an = Number(av), bn = Number(bv);
+          const cmp = (!Number.isNaN(an) && !Number.isNaN(bn) && av !== '' && bv !== '')
+            ? an - bn
+            : av.localeCompare(bv, 'pt-BR', {{ sensitivity: 'base' }});
+          return sortAsc ? cmp : -cmp;
+        }});
+        trs.forEach(tr => tbody.appendChild(tr));
+      }});
+    }});
+
+    inp.addEventListener('input', () => {{
+      const q = inp.value.trim().toLowerCase();
+      let visible = 0;
+      tbody.querySelectorAll('tr').forEach(tr => {{
+        const show = !q || tr.textContent.toLowerCase().includes(q);
+        tr.style.display = show ? '' : 'none';
+        if (show) visible++;
+      }});
+      badge.textContent = visible + ' registro(s)';
+    }});
+
+    function exportPdf() {{
+      window.print();
+    }}
+
+    function exportHtml() {{
+      const clone = document.documentElement.cloneNode(true);
+      const tb = clone.querySelector('.toolbar');
+      if (tb) tb.remove();
+      const html = '<!DOCTYPE html>\\n' + clone.outerHTML;
+      const blob = new Blob([html], {{ type: 'text/html;charset=utf-8' }});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${{SCRIPT_NAME}}_relatorio.html`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }}
+
+    async function exportEmail() {{
+      const headers = Array.from(document.querySelectorAll('#report-table thead th')).map(th => th.textContent.trim());
+      const visibleRows = [];
+      tbody.querySelectorAll('tr').forEach(tr => {{
+        if (tr.style.display === 'none') return;
+        const cols = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim());
+        if (cols.length) visibleRows.push(cols);
+      }});
+      const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const thHtml = headers.map(h => `<th style="text-align:left;padding:9px 12px;background:#f3f3f6;color:#666b78;border:1px solid #dee0e5;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">${{esc(h)}}</th>`).join('');
+      const trHtml = visibleRows.map(r =>
+        '<tr>' + r.map(c => `<td style="padding:9px 12px;border:1px solid #e8ebed;font-size:13px;color:#212129;">${{esc(c)}}</td>`).join('') + '</tr>'
+      ).join('');
+      const emailHtml = `
+        <div style="font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#212129;border-top:4px solid #aa0012;padding-top:12px;">
+          <h2 style="margin:0 0 6px;font-size:16px;color:#212129;">Relatório <span style="color:#aa0012;">@${{esc(SCRIPT_NAME)}}</span></h2>
+          <p style="margin:0 0 12px;font-size:12px;color:#666b78;">${{visibleRows.length}} registro(s)</p>
+          <table style="border-collapse:collapse;width:100%;max-width:800px;background:#ffffff;border:1px solid #dee0e5;">
+            <thead><tr>${{thHtml}}</tr></thead>
+            <tbody>${{trHtml}}</tbody>
+          </table>
+        </div>`.trim();
+      const plainText = `Relatório @${{SCRIPT_NAME}}\\n\\n` + visibleRows.map(r => r.join(' | ')).join('\\n');
+
+      try {{
+        if (window.ClipboardItem && navigator.clipboard?.write) {{
+          await navigator.clipboard.write([
+            new ClipboardItem({{
+              'text/html': new Blob([emailHtml], {{ type: 'text/html' }}),
+              'text/plain': new Blob([plainText], {{ type: 'text/plain' }}),
+            }}),
+          ]);
+        }} else {{
+          await navigator.clipboard?.writeText(emailHtml);
+        }}
+      }} catch {{}}
+
+      const btn = document.querySelector('[onclick="exportEmail()"]');
+      if (btn) {{
+        const orig = btn.textContent;
+        btn.textContent = 'HTML copiado! Cole (Cmd+V) no e-mail';
+        setTimeout(() => {{ btn.textContent = orig; }}, 4000);
+      }}
+      const subject = encodeURIComponent(`Relatório @${{SCRIPT_NAME}}`);
+      window.location.href = `mailto:?subject=${{subject}}`;
+    }}
+  </script>
+</body>
+</html>"""
+
+
+@router.post("/v1/scripts/run")
+async def run_script_endpoint(request: Request):
+    """Run a customizable Python script by name."""
+    body = await request.json()
+    name = str(body.get("name", "")).strip().lstrip("@/")
+    args = str(body.get("args", ""))
+    res = await asyncio.to_thread(_execute_custom_script, name, args)
+    return _format_script_api_response(res)
+
+
+@router.get("/v1/scripts/{name}/run")
+async def run_named_script_get(name: str, request: Request):
+    """Run a customizable Python script via GET (JSON by default, or HTML with ``?format=html``)."""
+    import shlex
+    from fastapi.responses import HTMLResponse
+
+    clean_name = name.strip().lstrip("@/")
+    params = dict(request.query_params)
+    out_format = params.pop("format", "json").strip().lower()
+    raw_args = params.pop("args", "")
+    parts: list[str] = [raw_args] if raw_args.strip() else []
+    for k, v in params.items():
+        flag = k if k.startswith("--") else f"--{k.replace('_', '-')}"
+        if v.lower() in ("true", "1", "yes"):
+            parts.append(flag)
+        elif v.lower() in ("false", "0", "no", ""):
+            continue
+        else:
+            parts.append(f"{flag} {shlex.quote(v)}")
+    res = await asyncio.to_thread(_execute_custom_script, clean_name, " ".join(parts))
+    if out_format == "html":
+        return HTMLResponse(content=_render_script_html_output(res))
+    return _format_script_api_response(res)
+
+
+@router.get("/v1/scripts/{name}/html", include_in_schema=False)
+async def run_named_script_html(name: str, request: Request):
+    """Convenience HTML report endpoint for a customizable Python script."""
+    import shlex
+    from fastapi.responses import HTMLResponse
+
+    clean_name = name.strip().lstrip("@/")
+    params = dict(request.query_params)
+    params.pop("format", None)
+    raw_args = params.pop("args", "")
+    parts: list[str] = [raw_args] if raw_args.strip() else []
+    for k, v in params.items():
+        flag = k if k.startswith("--") else f"--{k.replace('_', '-')}"
+        if v.lower() in ("true", "1", "yes"):
+            parts.append(flag)
+        elif v.lower() in ("false", "0", "no", ""):
+            continue
+        else:
+            parts.append(f"{flag} {shlex.quote(v)}")
+    res = await asyncio.to_thread(_execute_custom_script, clean_name, " ".join(parts))
+    return HTMLResponse(content=_render_script_html_output(res))
+
+
+@router.post("/v1/scripts/{name}/run")
+async def run_named_script_post(name: str, request: Request):
+    """Run a customizable Python script via POST with JSON ``{"args": "..."}``."""
+    clean_name = name.strip().lstrip("@/")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    args = str(body.get("args", "")) if isinstance(body, dict) else ""
+    res = await asyncio.to_thread(_execute_custom_script, clean_name, args)
+    return _format_script_api_response(res)
+
+
 @router.post("/v1/chat/completions")
 async def chat_completions(request_body: ChatCompletionRequest, request: Request):
     """Handle chat completion requests (streaming and non-streaming)."""
+    slash_resp = await _maybe_handle_slash_script(request_body)
+    if slash_resp is not None:
+        return slash_resp
+
     engine = request.app.state.engine
     agent = getattr(request.app.state, "agent", None)
     model = request_body.model
@@ -1169,7 +2098,11 @@ async def list_models(request: Request) -> ModelListResponse:
     configured LiteLLM engine remain here because LiteLLM owns their routing
     and may use provider-qualified IDs that resemble OpenRouter IDs.
     """
-    from openjarvis.server.cloud_router import is_cloud_model, list_local_models
+    from openjarvis.server.cloud_router import (
+        _load_keys,
+        is_cloud_model,
+        list_local_models,
+    )
 
     # Prefer engine.list_models() so mock engines work in tests.
     # Filter out direct-cloud model IDs that may appear via MultiEngine, but
@@ -1187,6 +2120,20 @@ async def list_models(request: Request) -> ModelListResponse:
     ]
     if not model_ids:
         model_ids = await list_local_models()
+
+    # Include configured Azure deployments (or default Azure models) first so
+    # they appear at the top of the picker when Azure is configured.
+    cloud_keys = _load_keys()
+    if cloud_keys.get("AZURE_OPENAI_API_KEY") and cloud_keys.get("AZURE_OPENAI_ENDPOINT"):
+        azure_deps = [
+            dep.strip()
+            for dep in cloud_keys.get("AZURE_OPENAI_DEPLOYMENT", "").split(",")
+            if dep.strip()
+        ]
+        if not azure_deps:
+            azure_deps = ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "o3-mini"]
+        azure_ids = [f"azure/{dep_name}" for dep_name in azure_deps]
+        model_ids = azure_ids + [m for m in model_ids if m not in azure_ids]
 
     # Keep embed-only models out of the chat model picker. They still work for
     # memory/retrieval via the embedder path; putting them in /v1/models made
@@ -1276,6 +2223,87 @@ async def delete_model(model_name: str, request: Request):
     return {"status": "deleted", "model": model_name}
 
 
+_ALLOWED_CLOUD_CONFIG_KEYS = frozenset(
+    {
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "OPENROUTER_API_KEY",
+        "MINIMAX_API_KEY",
+        "ATLASCLOUD_API_KEY",
+        "AZURE_OPENAI_API_KEY",
+        "AZURE_OPENAI_ENDPOINT",
+        "AZURE_OPENAI_DEPLOYMENT",
+        "AZURE_OPENAI_API_VERSION",
+    }
+)
+
+
+def _is_allowed_cloud_key(name: str) -> bool:
+    return name.endswith("_API_KEY") or name in _ALLOWED_CLOUD_CONFIG_KEYS
+
+
+def _write_cloud_keys_env(updates: dict[str, str]) -> None:
+    """Persist cloud key updates to ~/.openjarvis/cloud-keys.env (0600)."""
+    from openjarvis.core.paths import get_config_dir
+
+    keys_path = get_config_dir() / "cloud-keys.env"
+    keys_path.parent.mkdir(parents=True, exist_ok=True)
+    existing: dict[str, str] = {}
+    if keys_path.exists():
+        for raw_line in keys_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                existing[k.strip()] = v.strip()
+    for k, v in updates.items():
+        if v:
+            existing[k] = v
+        else:
+            existing.pop(k, None)
+    lines = [f"{k}={v}" for k, v in existing.items()]
+    keys_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    with contextlib.suppress(OSError):
+        keys_path.chmod(0o600)
+
+
+@router.get("/v1/cloud/status")
+async def get_cloud_status():
+    """Return boolean status of configured cloud keys and Azure deployments."""
+    from openjarvis.server.cloud_router import _load_keys
+
+    keys = _load_keys()
+    status = {k: bool(keys.get(k)) for k in _ALLOWED_CLOUD_CONFIG_KEYS}
+    deployments = [
+        d.strip()
+        for d in keys.get("AZURE_OPENAI_DEPLOYMENT", "").split(",")
+        if d.strip()
+    ]
+    return {
+        "keys": status,
+        "azure_deployments": deployments,
+        "azure_endpoint": keys.get("AZURE_OPENAI_ENDPOINT", ""),
+        "azure_api_version": keys.get("AZURE_OPENAI_API_VERSION", ""),
+    }
+
+
+@router.post("/v1/cloud/keys")
+async def save_cloud_keys_endpoint(request: Request):
+    """Save cloud keys/config to cloud-keys.env and hot-reload CloudEngine."""
+    body = await request.json()
+    raw_keys = body.get("keys") if isinstance(body, dict) else None
+    if not isinstance(raw_keys, dict):
+        raise HTTPException(status_code=400, detail="'keys' object is required")
+    updates = {
+        str(k): str(v).strip()
+        for k, v in raw_keys.items()
+        if _is_allowed_cloud_key(str(k))
+    }
+    _write_cloud_keys_env(updates)
+    return await reload_cloud_engine(request)
+
+
 @router.post("/v1/cloud/reload")
 async def reload_cloud_engine(request: Request):
     """Hot-reload cloud API keys and (re-)initialize the cloud engine.
@@ -1293,7 +2321,7 @@ async def reload_cloud_engine(request: Request):
             submitted_keys = {
                 str(k): str(v)
                 for k, v in raw_keys.items()
-                if str(k).endswith("_API_KEY")
+                if _is_allowed_cloud_key(str(k))
             }
     except Exception:
         submitted_keys = None
@@ -1353,6 +2381,9 @@ async def reload_cloud_engine(request: Request):
             outer._inner = new_multi
         else:
             request.app.state.engine = new_multi
+            agent = getattr(request.app.state, "agent", None)
+            if agent is not None and hasattr(agent, "_engine"):
+                agent._engine = new_multi
         request.app.state.engine_name = "multi"
 
     return {"status": "ok", "message": "Cloud engine reloaded"}

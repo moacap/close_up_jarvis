@@ -27,10 +27,12 @@ _OPENAI_PREFIXES = ("gpt-", "o1-", "o3-", "o4-", "chatgpt-")
 _ANTHROPIC_PREFIXES = ("claude-",)
 _GOOGLE_PREFIXES = ("gemini-",)
 _MINIMAX_PREFIXES = ("MiniMax-",)
-# Atlas Cloud IDs are already "vendor/model", so they must be recognised by
-# their routing prefix before the generic '"/" means OpenRouter' fallback
-# below — otherwise "atlascloud/openai/gpt-4.1-mini" is sent to OpenRouter.
+# Atlas Cloud and Azure IDs carry a routing prefix, so they must be recognised
+# before the generic '"/" means OpenRouter' fallback below — otherwise
+# "atlascloud/openai/gpt-4.1-mini" or "azure/gpt-4o" is sent to OpenRouter.
 _ATLASCLOUD_PREFIX = "atlascloud/"
+_AZURE_PREFIX = "azure/"
+_DEFAULT_AZURE_API_VERSION = "2024-10-21"
 
 # HuggingFace orgs that host local-only quantised models — never route to cloud.
 _LOCAL_HF_ORGS = (
@@ -66,6 +68,10 @@ def _load_keys() -> dict[str, str]:
         "OPENROUTER_API_KEY",
         "MINIMAX_API_KEY",
         "ATLASCLOUD_API_KEY",
+        "AZURE_OPENAI_API_KEY",
+        "AZURE_OPENAI_ENDPOINT",
+        "AZURE_OPENAI_DEPLOYMENT",
+        "AZURE_OPENAI_API_VERSION",
     ):
         val = os.environ.get(name)
         if val:
@@ -89,6 +95,8 @@ def get_provider(model: str) -> str | None:
         return "minimax"
     if model.startswith(_ATLASCLOUD_PREFIX):
         return "atlascloud"
+    if model.startswith(_AZURE_PREFIX):
+        return "azure"
     if any(model.startswith(org) for org in _LOCAL_HF_ORGS):
         return None  # local model, never route to cloud
     if "/" in model:  # openrouter format: "meta-llama/llama-3-8b"
@@ -164,6 +172,35 @@ def _to_google_contents(messages: Sequence[Message]) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
+async def _stream_openai_sse(
+    url: str,
+    headers: dict[str, str],
+    payload: dict[str, Any],
+) -> AsyncIterator[str]:
+    """Stream SSE content tokens from an OpenAI-compatible chat/completions URL."""
+    async with httpx.AsyncClient(timeout=180) as client:
+        async with client.stream(
+            "POST",
+            url,
+            json=payload,
+            headers=headers,
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                data = line[6:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                    delta = chunk["choices"][0]["delta"].get("content") or ""
+                    if delta:
+                        yield delta
+                except Exception:
+                    pass
+
+
 async def _stream_openai(
     model: str,
     messages: Sequence[Message],
@@ -184,31 +221,75 @@ async def _stream_openai(
         "max_tokens": max_tokens,
         "stream": True,
     }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    async for token in _stream_openai_sse(
+        f"{base_url}/chat/completions", headers, payload
+    ):
+        yield token
 
-    async with httpx.AsyncClient(timeout=180) as client:
-        async with client.stream(
-            "POST",
-            f"{base_url}/chat/completions",
-            json=payload,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-        ) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                if not line.startswith("data: "):
-                    continue
-                data = line[6:].strip()
-                if data == "[DONE]":
-                    break
-                try:
-                    chunk = json.loads(data)
-                    delta = chunk["choices"][0]["delta"].get("content") or ""
-                    if delta:
-                        yield delta
-                except Exception:
-                    pass
+
+async def _stream_azure(
+    model: str,
+    messages: Sequence[Message],
+    temperature: float,
+    max_tokens: int,
+) -> AsyncIterator[str]:
+    keys = _load_keys()
+    api_key = keys.get("AZURE_OPENAI_API_KEY", "").strip()
+    endpoint = keys.get("AZURE_OPENAI_ENDPOINT", "").strip().rstrip("/")
+    deployment = (
+        model.removeprefix(_AZURE_PREFIX).strip()
+        or keys.get("AZURE_OPENAI_DEPLOYMENT", "").strip()
+    )
+    api_version = (
+        keys.get("AZURE_OPENAI_API_VERSION", "").strip()
+        or _DEFAULT_AZURE_API_VERSION
+    )
+    if not api_key:
+        raise ValueError(
+            "AZURE_OPENAI_API_KEY not set — add it in the Cloud Models tab"
+        )
+    if not endpoint:
+        raise ValueError(
+            "AZURE_OPENAI_ENDPOINT not set — add it in the Cloud Models tab"
+        )
+    if not deployment:
+        raise ValueError(
+            "AZURE_OPENAI_DEPLOYMENT not set — specify a deployment name"
+        )
+
+    payload: dict[str, Any] = {
+        "model": deployment,
+        "messages": _to_openai_msgs(messages),
+        "stream": True,
+    }
+    if deployment.startswith(("gpt-5", "o1", "o3", "o4")):
+        payload["max_completion_tokens"] = max_tokens
+    else:
+        payload["max_tokens"] = max_tokens
+        payload["temperature"] = temperature
+    if endpoint.endswith("/v1") or endpoint.endswith("/openai/v1"):
+        url = f"{endpoint}/chat/completions"
+        headers = {
+            "api-key": api_key,
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+    else:
+        url = (
+            f"{endpoint}/openai/deployments/{deployment}"
+            f"/chat/completions?api-version={api_version}"
+        )
+        headers = {
+            "api-key": api_key,
+            "Content-Type": "application/json",
+        }
+
+    async for token in _stream_openai_sse(url, headers, payload):
+        yield token
 
 
 async def _stream_anthropic(
@@ -438,6 +519,10 @@ async def stream_cloud(
             base_url="https://api.minimax.io/v1",
             api_key_name="MINIMAX_API_KEY",
         ):
+            yield token
+
+    elif provider == "azure":
+        async for token in _stream_azure(model, messages, temperature, max_tokens):
             yield token
 
     else:

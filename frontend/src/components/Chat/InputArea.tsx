@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Send, Square, Paperclip, Search } from 'lucide-react';
+import { Send, Square, Paperclip, Search, Terminal } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useAppStore, generateId } from '../../lib/store';
@@ -83,6 +83,14 @@ function useResearchCorpusSync(enabled: boolean): {
 export function InputArea() {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
+  const [slashScripts, setSlashScripts] = useState<Array<{
+    name: string;
+    command: string;
+    path?: string;
+    params?: Array<{ flag: string; help: string }>;
+  }>>([]);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashDismissed, setSlashDismissed] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -561,7 +569,97 @@ export function InputArea() {
     maxTokens,
   ]);
 
+  const scriptMatch = input.match(/(?:^|\s)@([A-Za-z0-9_-]*)$/);
+  const isScriptTyping = Boolean(scriptMatch) && !input.includes('\n') && !slashDismissed;
+  const paramMatch = input.match(/@([A-Za-z0-9_-]+)\s+(?:[^\n]*\s)?(--[^\s]*)$/);
+  const isParamTyping = Boolean(paramMatch) && !input.includes('\n') && !slashDismissed;
+  const activeScriptName = paramMatch?.[1] ?? '';
+  const activeParamFilter = (paramMatch?.[2] ?? '').toLowerCase();
+
+  const scriptFilter = isScriptTyping ? (scriptMatch?.[1] ?? '').toLowerCase() : '';
+  const menuMode: 'scripts' | 'params' | null = isScriptTyping
+    ? 'scripts'
+    : isParamTyping
+    ? 'params'
+    : null;
+
+  const menuOptions =
+    menuMode === 'scripts'
+      ? [
+          ...slashScripts.map((s) => ({
+            value: s.command,
+            description: 'Script Python customizável',
+          })),
+          { value: '@scripts', description: 'Listar todos os scripts disponíveis' },
+        ].filter((opt) => opt.value.slice(1).toLowerCase().includes(scriptFilter))
+      : menuMode === 'params'
+      ? (
+          slashScripts.find((s) => s.name === activeScriptName)?.params ?? [
+            { flag: '--help', help: 'Mostrar ajuda e parâmetros do script' },
+          ]
+        )
+          .filter((p) => p.flag.toLowerCase().startsWith(activeParamFilter))
+          .map((p) => ({
+            value: p.flag,
+            description: p.help || 'Parâmetro do script',
+          }))
+      : [];
+
+  useEffect(() => {
+    if (!input.includes('@')) {
+      setSlashDismissed(false);
+      return;
+    }
+    if (!menuMode) return;
+    let cancelled = false;
+    fetch(`${getBase()}/v1/scripts`, { headers: authHeaders() })
+      .then((res) => (res.ok ? res.json() : { scripts: [] }))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data?.scripts)) {
+          setSlashScripts(data.scripts);
+          setSlashIndex(0);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [menuMode, input]);
+
+  const selectMenuOption = (value: string) => {
+    if (menuMode === 'scripts') {
+      setInput((prev) => prev.replace(/@[A-Za-z0-9_-]*$/, `${value} `));
+    } else if (menuMode === 'params') {
+      setInput((prev) => prev.replace(/--[^\s]*$/, `${value} `));
+    }
+    setSlashDismissed(false);
+    textareaRef.current?.focus();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (menuMode && menuOptions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSlashIndex((i) => (i + 1) % menuOptions.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSlashIndex((i) => (i - 1 + menuOptions.length) % menuOptions.length);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSlashDismissed(true);
+        return;
+      }
+      if ((e.key === 'Enter' || e.key === 'Tab') && !e.shiftKey) {
+        e.preventDefault();
+        const chosen = menuOptions[Math.min(slashIndex, menuOptions.length - 1)];
+        if (chosen) selectMenuOption(chosen.value);
+        return;
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -602,6 +700,55 @@ export function InputArea() {
           </div>
         )}
       </div>
+      <div className="relative">
+        {menuMode && menuOptions.length > 0 && (
+          <div
+            className="absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden shadow-lg z-30"
+            style={{
+              background: 'var(--color-bg-secondary)',
+              border: '1px solid var(--color-border)',
+              maxHeight: '220px',
+              overflowY: 'auto',
+            }}
+          >
+            <div
+              className="px-3 py-1.5 text-[10px] uppercase tracking-wider"
+              style={{ color: 'var(--color-text-tertiary)', borderBottom: '1px solid var(--color-border)' }}
+            >
+              {menuMode === 'scripts'
+                ? 'Scripts customizáveis'
+                : `Parâmetros de @${activeScriptName}`}
+            </div>
+            {menuOptions.map((opt, idx) => {
+              const active = idx === Math.min(slashIndex, menuOptions.length - 1);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    selectMenuOption(opt.value);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-left cursor-pointer transition-colors"
+                  style={{
+                    background: active ? 'var(--color-accent-subtle)' : 'transparent',
+                  }}
+                >
+                  <Terminal size={13} style={{ color: active ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }} />
+                  <span
+                    className="text-xs font-mono font-medium"
+                    style={{ color: active ? 'var(--color-accent)' : 'var(--color-text)' }}
+                  >
+                    {opt.value}
+                  </span>
+                  <span className="text-[11px] truncate" style={{ color: 'var(--color-text-tertiary)' }}>
+                    {opt.description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       <div
         className="flex items-center gap-2 rounded-2xl px-4 py-3 transition-shadow"
         style={{
@@ -652,6 +799,7 @@ export function InputArea() {
             </button>
           </div>
         )}
+      </div>
       </div>
       <div className="flex items-center justify-center mt-2 text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>
         <span>

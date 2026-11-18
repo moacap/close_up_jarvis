@@ -26,6 +26,7 @@ import {
   checkHealth,
   fetchSpeechHealth,
   fetchTtsHealth,
+  synthesizeSpeech,
   getMemoryStats,
   getInferenceSource,
   setInferenceSource,
@@ -69,10 +70,12 @@ function ApiKeyInput({
   keyName,
   placeholder,
   toolName,
+  isSecret = true,
 }: {
   keyName: string;
   placeholder: string;
   toolName?: string;
+  isSecret?: boolean;
 }) {
   const { t } = useTranslation();
   const [value, setValue] = useState('');
@@ -81,22 +84,17 @@ function ApiKeyInput({
   const [error, setError] = useState('');
   const desktopKeyStorage = isTauri();
   const serverToolStorage = !desktopKeyStorage && !!toolName;
-  const canManage = desktopKeyStorage || serverToolStorage;
 
   const refresh = useCallback(async () => {
-    if (!canManage) {
-      setHasKey(false);
-      return;
-    }
     try {
-      const status = desktopKeyStorage
-        ? await getCloudKeyStatus()
-        : await fetchToolCredentialStatus(toolName!);
+      const status = serverToolStorage
+        ? await fetchToolCredentialStatus(toolName!)
+        : await getCloudKeyStatus();
       setHasKey(!!status[keyName]);
     } catch {
       setHasKey(false);
     }
-  }, [canManage, desktopKeyStorage, keyName, toolName]);
+  }, [keyName, serverToolStorage, toolName]);
 
   useEffect(() => {
     void refresh();
@@ -109,12 +107,10 @@ function ApiKeyInput({
     if (!next) return;
     setError('');
     try {
-      if (desktopKeyStorage) {
-        await saveCloudKey(keyName, next);
-      } else if (toolName) {
-        await saveToolCredentials(toolName, { [keyName]: next });
+      if (serverToolStorage) {
+        await saveToolCredentials(toolName!, { [keyName]: next });
       } else {
-        return;
+        await saveCloudKey(keyName, next);
       }
       setValue('');
       setHasKey(true);
@@ -129,12 +125,10 @@ function ApiKeyInput({
   const remove = async () => {
     setError('');
     try {
-      if (desktopKeyStorage) {
-        await saveCloudKey(keyName, '');
-      } else if (toolName) {
-        await deleteToolCredential(toolName, keyName);
+      if (serverToolStorage) {
+        await deleteToolCredential(toolName!, keyName);
       } else {
-        return;
+        await saveCloudKey(keyName, '');
       }
       setValue('');
       setHasKey(false);
@@ -149,12 +143,17 @@ function ApiKeyInput({
   return (
     <div className="flex items-center gap-2">
       <input
-        type="password"
+        type={isSecret ? 'password' : 'text'}
         value={value}
         onChange={e => setValue(e.target.value)}
         onBlur={() => { if (value.trim()) void save(value); }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && value.trim()) {
+            e.preventDefault();
+            void save(value);
+          }
+        }}
         placeholder={hasKey ? (desktopKeyStorage ? t('settings.apiKeys.savedInSecureStorage') : t('settings.apiKeys.savedByLocalServer')) : placeholder}
-        disabled={!canManage}
         className="w-48 px-2 py-1 rounded text-xs"
         style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }} />
       {hasKey && (
@@ -174,20 +173,15 @@ function ApiKeyInput({
 
 function CloudProviderStatus({ label, keyName }: { label: string; keyName: string }) {
   const [hasKey, setHasKey] = useState(false);
-  const desktopKeyStorage = isTauri();
 
   const refresh = useCallback(async () => {
-    if (!desktopKeyStorage) {
-      setHasKey(false);
-      return;
-    }
     try {
       const status = await getCloudKeyStatus();
       setHasKey(!!status[keyName]);
     } catch {
       setHasKey(false);
     }
-  }, [desktopKeyStorage, keyName]);
+  }, [keyName]);
 
   useEffect(() => {
     void refresh();
@@ -300,7 +294,8 @@ export function SettingsPage() {
   const serverInfo = useAppStore((s) => s.serverInfo);
   const [healthy, setHealthy] = useState<boolean | null>(null);
   const [speechBackendAvailable, setSpeechBackendAvailable] = useState<boolean | null>(null);
-  const [ttsBackend, setTtsBackend] = useState<{ available: boolean; backend?: string; voice_id?: string } | null>(null);
+  const [ttsBackend, setTtsBackend] = useState<{ available: boolean; backend?: string; voice_id?: string; voices?: string[] } | null>(null);
+  const [testingVoice, setTestingVoice] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(() => !isAutoUpdateDisabled());
@@ -675,6 +670,7 @@ export function SettingsPage() {
                 <CloudProviderStatus label="Google" keyName="GEMINI_API_KEY" />
                 <CloudProviderStatus label="OpenRouter" keyName="OPENROUTER_API_KEY" />
                 <CloudProviderStatus label="Atlas Cloud" keyName="ATLASCLOUD_API_KEY" />
+                <CloudProviderStatus label="Azure OpenAI" keyName="AZURE_OPENAI_API_KEY" />
               </div>
             </SettingRow>
           </Section>
@@ -695,6 +691,18 @@ export function SettingsPage() {
             </SettingRow>
             <SettingRow label="Atlas Cloud" description={t('settings.apiKeys.atlasCloud.description')}>
               <ApiKeyInput keyName="ATLASCLOUD_API_KEY" placeholder={t('settings.apiKeys.atlasCloud.placeholder')} />
+            </SettingRow>
+            <SettingRow label="Azure OpenAI (API Key)" description="Chave de API do recurso Azure OpenAI / Azure AI Foundry">
+              <ApiKeyInput keyName="AZURE_OPENAI_API_KEY" placeholder="Azure API key..." />
+            </SettingRow>
+            <SettingRow label="Azure OpenAI (Endpoint)" description="URL do recurso (ex.: https://seu-recurso.openai.azure.com)">
+              <ApiKeyInput keyName="AZURE_OPENAI_ENDPOINT" placeholder="https://<resource>.openai.azure.com" isSecret={false} />
+            </SettingRow>
+            <SettingRow label="Azure OpenAI (Deployment)" description="Nome(s) do(s) deployment(s), separados por vírgula">
+              <ApiKeyInput keyName="AZURE_OPENAI_DEPLOYMENT" placeholder="gpt-4o" isSecret={false} />
+            </SettingRow>
+            <SettingRow label="Azure OpenAI (API Version)" description="Versão da API (padrão: 2024-10-21)">
+              <ApiKeyInput keyName="AZURE_OPENAI_API_VERSION" placeholder="2024-10-21" isSecret={false} />
             </SettingRow>
           </Section>
 
@@ -885,19 +893,103 @@ export function SettingsPage() {
               </button>
             </SettingRow>
             <SettingRow label={t('settings.speech.voice.label')} description={t('settings.speech.voice.description')}>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span
                   className="w-2 h-2 rounded-full"
                   style={{
                     background: ttsBackend?.available ? 'var(--color-success)' : 'var(--color-text-tertiary)',
                   }}
                 />
-                <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                  {ttsBackend === null ? t('settings.speech.voice.checking')
-                    : ttsBackend.available ? `${ttsBackend.backend}${ttsBackend.voice_id ? ` / ${ttsBackend.voice_id}` : ''}`
-                    : t('settings.speech.voice.notConfigured')}
-                </span>
+                {ttsBackend?.available && (ttsBackend.voices?.length ?? 0) > 0 ? (
+                  <>
+                    <select
+                      value={settings.ttsVoice || ttsBackend.voice_id || ''}
+                      onChange={(e) => {
+                        updateSettings({ ttsVoice: e.target.value });
+                        showSaved();
+                      }}
+                      className="px-2.5 py-1 rounded text-xs cursor-pointer"
+                      style={{
+                        background: 'var(--color-bg)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      {ttsBackend.voices!.map((v) => (
+                        <option key={v} value={v}>
+                          {v} ({ttsBackend.backend})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={async () => {
+                        if (testingVoice) return;
+                        setTestingVoice(true);
+                        try {
+                          const voiceId = settings.ttsVoice || ttsBackend.voice_id;
+                          const language = settings.ttsLanguage || undefined;
+                          const sampleText =
+                            language?.startsWith('en')
+                              ? 'Hello, this is the selected voice in Close-UP.'
+                              : language?.startsWith('es')
+                              ? 'Hola, esta es la voz seleccionada en Close-UP.'
+                              : 'Olá, esta é a voz selecionada no Close-UP.';
+                          const blob = await synthesizeSpeech(
+                            sampleText,
+                            { voiceId, language },
+                          );
+                          const url = URL.createObjectURL(blob);
+                          const audio = new Audio(url);
+                          audio.onended = () => URL.revokeObjectURL(url);
+                          await audio.play();
+                        } catch {
+                          // Ignore playback errors in test button
+                        } finally {
+                          setTestingVoice(false);
+                        }
+                      }}
+                      disabled={testingVoice}
+                      className="px-2.5 py-1 rounded text-xs cursor-pointer disabled:opacity-50"
+                      style={{
+                        background: 'var(--color-bg-tertiary)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      {testingVoice ? 'Gerando...' : 'Testar voz'}
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    {ttsBackend === null ? t('settings.speech.voice.checking')
+                      : ttsBackend.available ? `${ttsBackend.backend}${ttsBackend.voice_id ? ` / ${ttsBackend.voice_id}` : ''}`
+                      : t('settings.speech.voice.notConfigured')}
+                  </span>
+                )}
               </div>
+            </SettingRow>
+            <SettingRow label="Idioma do TTS" description="Idioma preferido para síntese de voz (TTS)">
+              <select
+                value={settings.ttsLanguage || ''}
+                onChange={(e) => {
+                  updateSettings({ ttsLanguage: e.target.value });
+                  showSaved();
+                }}
+                className="px-2.5 py-1 rounded text-xs cursor-pointer"
+                style={{
+                  background: 'var(--color-bg)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text)',
+                }}
+              >
+                <option value="">Automático (padrão)</option>
+                <option value="pt-BR">Português (pt-BR)</option>
+                <option value="en-US">English (en-US)</option>
+                <option value="es-ES">Español (es-ES)</option>
+                <option value="fr-FR">Français (fr-FR)</option>
+                <option value="de-DE">Deutsch (de-DE)</option>
+                <option value="it-IT">Italiano (it-IT)</option>
+              </select>
             </SettingRow>
             <SettingRow label={t('settings.speech.backendStatus.label')} description={t('settings.speech.backendStatus.description')}>
               <div className="flex items-center gap-2">
@@ -1007,24 +1099,6 @@ export function SettingsPage() {
               <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
                 {t('settings.about.researchNote')}
               </p>
-              <div className="flex gap-3 mt-3 text-xs">
-                <a
-                  href="https://openjarvis.stanford.edu/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'var(--color-accent)' }}
-                >
-                  {t('settings.about.links.projectSite')}
-                </a>
-                <a
-                  href="https://open-jarvis.github.io/OpenJarvis/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'var(--color-accent)' }}
-                >
-                  {t('settings.about.links.documentation')}
-                </a>
-              </div>
             </div>
           </Section>
         </div>

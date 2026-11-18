@@ -38,6 +38,7 @@ class SpeechSynthesizeRequest(BaseModel):
     text: str
     voice_id: Optional[str] = None
     speed: Optional[float] = None
+    language: Optional[str] = None
 
 
 class MemoryStoreRequest(BaseModel):
@@ -1153,25 +1154,92 @@ async def synthesize_speech(request: Request, body: SpeechSynthesizeRequest):
         speed = body.speed
 
     try:
+        import inspect
+
+        synth_kwargs: dict[str, Any] = {
+            "voice_id": voice_id,
+            "speed": speed,
+            "output_format": "wav",
+        }
+        if body.language and "language" in inspect.signature(backend.synthesize).parameters:
+            synth_kwargs["language"] = body.language
         result = await asyncio.to_thread(
             backend.synthesize,
             text,
-            voice_id=voice_id,
-            speed=speed,
-            output_format="wav",
+            **synth_kwargs,
         )
     except Exception as exc:
         logger.exception("Speech synthesis failed")
         raise HTTPException(status_code=500, detail="Speech synthesis failed") from exc
 
+    resp_headers = {
+        "X-Voice-Id": result.voice_id or voice_id,
+        "X-Sample-Rate": str(result.sample_rate),
+    }
+    if body.language:
+        resp_headers["X-TTS-Language"] = body.language
     return Response(
         content=result.audio,
         media_type="audio/wav",
-        headers={
-            "X-Voice-Id": result.voice_id or voice_id,
-            "X-Sample-Rate": str(result.sample_rate),
-        },
+        headers=resp_headers,
     )
+
+
+_BACKEND_VOICES: dict[str, list[str]] = {
+    "openai_tts": [
+        "alloy",
+        "ash",
+        "ballad",
+        "coral",
+        "echo",
+        "fable",
+        "nova",
+        "onyx",
+        "sage",
+        "shimmer",
+        "verse",
+    ],
+    "kokoro": [
+        "af_heart",
+        "af_bella",
+        "af_nicole",
+        "af_sarah",
+        "am_adam",
+        "am_michael",
+        "bf_emma",
+        "bm_george",
+    ],
+}
+
+
+def _available_voices_for(backend, default_voice: str = "") -> list[str]:
+    if hasattr(backend, "list_voices"):
+        try:
+            voices = backend.list_voices()
+            if isinstance(voices, list) and voices:
+                return [str(v) for v in voices]
+        except Exception:
+            pass
+    bid = getattr(backend, "backend_id", "")
+    voices = list(_BACKEND_VOICES.get(bid, []))
+    if default_voice and default_voice not in voices:
+        voices.insert(0, default_voice)
+    return voices
+
+
+@speech_router.get("/tts/voices")
+async def tts_voices(request: Request):
+    """Return available voices for the active TTS backend."""
+    backend = await _resolve_tts_backend(request)
+    if backend is None:
+        return {"available": False, "voices": []}
+    voice_id, _ = _tts_voice_and_speed(request, backend)
+    return {
+        "available": True,
+        "backend": getattr(backend, "backend_id", ""),
+        "default_voice": voice_id,
+        "voices": _available_voices_for(backend, voice_id),
+    }
 
 
 @speech_router.get("/tts/health")
@@ -1187,6 +1255,7 @@ async def tts_health(request: Request):
         "backend": getattr(backend, "backend_id", ""),
         "voice_id": voice_id,
         "speed": speed,
+        "voices": _available_voices_for(backend, voice_id),
     }
 
 

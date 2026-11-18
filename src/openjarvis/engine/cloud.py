@@ -176,6 +176,10 @@ def _is_atlascloud_model(model: str) -> bool:
     return model.startswith("atlascloud/")
 
 
+def _is_azure_model(model: str) -> bool:
+    return model.startswith("azure/")
+
+
 def _is_codex_model(model: str) -> bool:
     return model.startswith("codex/")
 
@@ -187,6 +191,7 @@ def _is_anthropic_model(model: str) -> bool:
         "claude" in model.lower()
         and not _is_openrouter_model(model)
         and not _is_atlascloud_model(model)
+        and not _is_azure_model(model)
     )
 
 
@@ -195,6 +200,7 @@ def _is_google_model(model: str) -> bool:
         "gemini" in model.lower()
         and not _is_openrouter_model(model)
         and not _is_atlascloud_model(model)
+        and not _is_azure_model(model)
     )
 
 
@@ -257,18 +263,29 @@ def _is_unsupported_temperature_error(exc: Exception) -> bool:
     )
 
 
+def _is_unsupported_max_tokens_error(exc: Exception) -> bool:
+    """True when the API rejects ``max_tokens`` in favor of ``max_completion_tokens``."""
+    message = str(exc).lower()
+    return "max_tokens" in message and "max_completion_tokens" in message
+
+
 def _chat_completion_with_temperature_retry(
     client: Any,
     create_kwargs: Dict[str, Any],
 ) -> Any:
-    """Invoke client.chat.completions.create, retrying without temperature on 400."""
-    try:
-        return client.chat.completions.create(**create_kwargs)
-    except Exception as exc:
-        if "temperature" in create_kwargs and _is_unsupported_temperature_error(exc):
-            create_kwargs.pop("temperature", None)
+    """Invoke client.chat.completions.create, adapting unsupported params on 400."""
+    for _ in range(3):
+        try:
             return client.chat.completions.create(**create_kwargs)
-        raise
+        except Exception as exc:
+            if "max_tokens" in create_kwargs and _is_unsupported_max_tokens_error(exc):
+                create_kwargs["max_completion_tokens"] = create_kwargs.pop("max_tokens")
+                continue
+            if "temperature" in create_kwargs and _is_unsupported_temperature_error(exc):
+                create_kwargs.pop("temperature", None)
+                continue
+            raise
+    return client.chat.completions.create(**create_kwargs)
 
 
 def estimate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
@@ -422,6 +439,7 @@ class CloudEngine(InferenceEngine):
         self._google_client: Any = None
         self._openrouter_client: Any = None
         self._atlascloud_client: Any = None
+        self._azure_client: Any = None
         self._minimax_client: Any = None
         self._deepseek_client: Any = None
         self._codex_client: Any = None
@@ -474,6 +492,27 @@ class CloudEngine(InferenceEngine):
                     base_url="https://api.atlascloud.ai/v1",
                     api_key=atlascloud_key,
                 )
+            except ImportError:
+                pass
+        azure_key = os.environ.get("AZURE_OPENAI_API_KEY")
+        azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "").strip().rstrip("/")
+        if azure_key and azure_endpoint:
+            try:
+                import openai
+
+                if azure_endpoint.endswith(("/v1", "/openai/v1")):
+                    self._azure_client = openai.OpenAI(
+                        base_url=azure_endpoint,
+                        api_key=azure_key,
+                    )
+                else:
+                    self._azure_client = openai.AzureOpenAI(
+                        azure_endpoint=azure_endpoint,
+                        api_key=azure_key,
+                        api_version=os.environ.get(
+                            "AZURE_OPENAI_API_VERSION", "2024-10-21"
+                        ),
+                    )
             except ImportError:
                 pass
         minimax_key = os.environ.get("MINIMAX_API_KEY")
@@ -1092,29 +1131,28 @@ class CloudEngine(InferenceEngine):
             ]
         return result
 
-    def _generate_atlascloud(
+    def _generate_prefixed_openai_compat(
         self,
         messages: Sequence[Message],
         *,
+        client: Any,
+        provider_name: str,
+        prefix: str,
+        missing_msg: str,
         model: str,
         temperature: float,
         max_tokens: int,
         **kwargs: Any,
     ) -> Dict[str, Any]:
-        if self._atlascloud_client is None:
-            raise EngineConnectionError(
-                "Atlas Cloud client not available — set ATLASCLOUD_API_KEY"
-            )
-        # Strip the "atlascloud/" prefix to get the gateway's own model ID.
-        actual_model = model.removeprefix("atlascloud/")
+        if client is None:
+            raise EngineConnectionError(missing_msg)
+        actual_model = model.removeprefix(prefix)
         create_kwargs: Dict[str, Any] = {
             "model": actual_model,
             "messages": messages_to_dicts(messages),
             "max_tokens": max_tokens,
             "temperature": temperature,
         }
-        # Atlas Cloud is OpenAI-compatible: response_format, tools and
-        # tool_choice all pass straight through.
         response_format = kwargs.pop("response_format", None)
         if response_format is not None:
             create_kwargs["response_format"] = response_format
@@ -1125,12 +1163,10 @@ class CloudEngine(InferenceEngine):
         if tool_choice is not None:
             create_kwargs["tool_choice"] = tool_choice
         t0 = time.monotonic()
-        resp = _chat_completion_with_temperature_retry(
-            self._atlascloud_client, create_kwargs
-        )
+        resp = _chat_completion_with_temperature_retry(client, create_kwargs)
         elapsed = time.monotonic() - t0
         choice = _first_choice_or_raise(
-            resp, provider="Atlas Cloud", model=actual_model
+            resp, provider=provider_name, model=actual_model
         )
         usage = resp.usage
         prompt_tokens = usage.prompt_tokens if usage else 0
@@ -1144,8 +1180,6 @@ class CloudEngine(InferenceEngine):
             },
             "model": resp.model,
             "finish_reason": choice.finish_reason or "stop",
-            # Cost is keyed on the prefixed ID so PRICING stays unambiguous
-            # between "atlascloud/minimaxai/minimax-m2.5" and MiniMax direct.
             "cost_usd": estimate_cost(model, prompt_tokens, completion_tokens),
             "ttft": elapsed,
         }
@@ -1162,6 +1196,50 @@ class CloudEngine(InferenceEngine):
                 for tc in choice.message.tool_calls
             ]
         return result
+
+    def _generate_atlascloud(
+        self,
+        messages: Sequence[Message],
+        *,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        return self._generate_prefixed_openai_compat(
+            messages,
+            client=self._atlascloud_client,
+            provider_name="Atlas Cloud",
+            prefix="atlascloud/",
+            missing_msg="Atlas Cloud client not available — set ATLASCLOUD_API_KEY",
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs,
+        )
+
+    def _generate_azure(
+        self,
+        messages: Sequence[Message],
+        *,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        return self._generate_prefixed_openai_compat(
+            messages,
+            client=self._azure_client,
+            provider_name="Azure OpenAI",
+            prefix="azure/",
+            missing_msg=(
+                "Azure OpenAI client not available — set AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT"
+            ),
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs,
+        )
 
     def _generate_minimax(
         self,
@@ -1291,6 +1369,8 @@ class CloudEngine(InferenceEngine):
             return self._generate_openrouter(messages, **kw)
         if _is_atlascloud_model(model):
             return self._generate_atlascloud(messages, **kw)
+        if _is_azure_model(model):
+            return self._generate_azure(messages, **kw)
         if _is_minimax_model(model):
             return self._generate_minimax(messages, **kw)
         if _is_deepseek_model(model):
@@ -1324,6 +1404,9 @@ class CloudEngine(InferenceEngine):
                 yield token
         elif _is_atlascloud_model(model):
             async for token in self._stream_atlascloud(messages, **kw):
+                yield token
+        elif _is_azure_model(model):
+            async for token in self._stream_azure(messages, **kw):
                 yield token
         elif _is_minimax_model(model):
             async for token in self._stream_minimax(messages, **kw):
@@ -1683,6 +1766,40 @@ class CloudEngine(InferenceEngine):
             if delta and delta.content:
                 yield delta.content
 
+    async def _stream_prefixed_openai_compat(
+        self,
+        messages: Sequence[Message],
+        *,
+        client: Any,
+        prefix: str,
+        missing_msg: str,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        if client is None:
+            raise EngineConnectionError(missing_msg)
+        actual_model = model.removeprefix(prefix)
+        create_kwargs: Dict[str, Any] = {
+            "model": actual_model,
+            "messages": messages_to_dicts(messages),
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": True,
+        }
+        tools = kwargs.pop("tools", None)
+        if tools:
+            create_kwargs["tools"] = tools
+        tool_choice = kwargs.pop("tool_choice", None)
+        if tool_choice is not None:
+            create_kwargs["tool_choice"] = tool_choice
+        resp = _chat_completion_with_temperature_retry(client, create_kwargs)
+        for chunk in resp:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            if delta and delta.content:
+                yield delta.content
+
     async def _stream_atlascloud(
         self,
         messages: Sequence[Message],
@@ -1692,30 +1809,38 @@ class CloudEngine(InferenceEngine):
         max_tokens: int,
         **kwargs: Any,
     ) -> AsyncIterator[str]:
-        if self._atlascloud_client is None:
-            raise EngineConnectionError("Atlas Cloud client not available")
-        actual_model = model.removeprefix("atlascloud/")
-        create_kwargs: Dict[str, Any] = {
-            "model": actual_model,
-            "messages": messages_to_dicts(messages),
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "stream": True,
-        }
-        # Forward tools / tool_choice (Atlas Cloud is OpenAI-compatible).
-        tools = kwargs.pop("tools", None)
-        if tools:
-            create_kwargs["tools"] = tools
-        tool_choice = kwargs.pop("tool_choice", None)
-        if tool_choice is not None:
-            create_kwargs["tool_choice"] = tool_choice
-        resp = _chat_completion_with_temperature_retry(
-            self._atlascloud_client, create_kwargs
-        )
-        for chunk in resp:
-            delta = chunk.choices[0].delta if chunk.choices else None
-            if delta and delta.content:
-                yield delta.content
+        async for token in self._stream_prefixed_openai_compat(
+            messages,
+            client=self._atlascloud_client,
+            prefix="atlascloud/",
+            missing_msg="Atlas Cloud client not available",
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs,
+        ):
+            yield token
+
+    async def _stream_azure(
+        self,
+        messages: Sequence[Message],
+        *,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        async for token in self._stream_prefixed_openai_compat(
+            messages,
+            client=self._azure_client,
+            prefix="azure/",
+            missing_msg="Azure OpenAI client not available",
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs,
+        ):
+            yield token
 
     async def _stream_minimax(
         self,
@@ -1816,6 +1941,18 @@ class CloudEngine(InferenceEngine):
                 raise EngineConnectionError("Atlas Cloud client not available")
             create_kwargs = {
                 "model": model.removeprefix("atlascloud/"),
+                "messages": messages_to_dicts(messages),
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "stream": True,
+                **kwargs,
+            }
+        elif _is_azure_model(model):
+            client = self._azure_client
+            if client is None:
+                raise EngineConnectionError("Azure OpenAI client not available")
+            create_kwargs = {
+                "model": model.removeprefix("azure/"),
                 "messages": messages_to_dicts(messages),
                 "max_tokens": max_tokens,
                 "temperature": temperature,
@@ -2016,6 +2153,13 @@ class CloudEngine(InferenceEngine):
             models.extend(_OPENROUTER_POPULAR)
         if self._atlascloud_client is not None:
             models.extend(_ATLASCLOUD_POPULAR)
+        if self._azure_client is not None:
+            deployments = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "")
+            models.extend(
+                f"azure/{d.strip()}"
+                for d in deployments.split(",")
+                if d.strip()
+            )
         if self._minimax_client is not None:
             models.extend(_MINIMAX_MODELS)
         if self._deepseek_client is not None:
@@ -2043,6 +2187,8 @@ class CloudEngine(InferenceEngine):
             return self._openrouter_client
         if _is_atlascloud_model(model):
             return self._atlascloud_client
+        if _is_azure_model(model):
+            return self._azure_client
         if _is_minimax_model(model):
             return self._minimax_client
         if _is_deepseek_model(model):
@@ -2075,6 +2221,7 @@ class CloudEngine(InferenceEngine):
             or self._google_client is not None
             or self._openrouter_client is not None
             or self._atlascloud_client is not None
+            or self._azure_client is not None
             or self._minimax_client is not None
             or self._deepseek_client is not None
             or self._codex_client is not None
@@ -2099,6 +2246,10 @@ class CloudEngine(InferenceEngine):
             if hasattr(self._atlascloud_client, "close"):
                 self._atlascloud_client.close()
             self._atlascloud_client = None
+        if self._azure_client is not None:
+            if hasattr(self._azure_client, "close"):
+                self._azure_client.close()
+            self._azure_client = None
         if self._minimax_client is not None:
             if hasattr(self._minimax_client, "close"):
                 self._minimax_client.close()

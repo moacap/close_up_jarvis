@@ -162,6 +162,11 @@ function GenericConnectPanel({
 }) {
   const [oauthSetup, setOauthSetup] = useState<OAuthSetupInfo | null>(null);
   const [feedUrls, setFeedUrls] = useState('');
+  const [salesFarmaUrl, setSalesFarmaUrl] = useState('https://demo.salesfarma.com.br/sincronia/api/omni/agent');
+  const [salesFarmaToken, setSalesFarmaToken] = useState('');
+  const [coachingQiUrl, setCoachingQiUrl] = useState('https://cupomnichannel.close-upinternational.com/targetai');
+  const [coachingQiTenant, setCoachingQiTenant] = useState('achehomolog');
+  const [coachingQiToken, setCoachingQiToken] = useState('');
 
   useEffect(() => {
     if (authType !== 'oauth') return;
@@ -201,6 +206,85 @@ function GenericConnectPanel({
             style={{ width: '100%', padding: 8, background: loading || disabled || feeds.length === 0 ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || disabled || feeds.length === 0 ? 'default' : 'pointer' }}
           >
             {loading ? 'Connecting...' : 'Save feeds'}
+          </button>
+        </div>
+      );
+    }
+    if (connectorId === 'sales_farma') {
+      const cleanUrl = salesFarmaUrl.trim();
+      return (
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 10 }}>
+            Informe a URL da API do Sales Farma Propagandistas (e o token Bearer, se exigido).
+          </div>
+          <input
+            type="text"
+            value={salesFarmaUrl}
+            onChange={(event) => setSalesFarmaUrl(event.target.value)}
+            placeholder="https://demo.salesfarma.com.br/sincronia/api/omni/agent"
+            style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
+          />
+          <input
+            type="password"
+            value={salesFarmaToken}
+            onChange={(event) => setSalesFarmaToken(event.target.value)}
+            placeholder="Bearer token (opcional)"
+            style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}
+          />
+          <button
+            onClick={() => onConnect({
+              ...(salesFarmaToken.trim() ? { token: salesFarmaToken.trim() } : {}),
+              config: { url: cleanUrl },
+            })}
+            disabled={loading || disabled || !cleanUrl}
+            style={{ width: '100%', padding: 8, background: loading || disabled || !cleanUrl ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || disabled || !cleanUrl ? 'default' : 'pointer' }}
+          >
+            {loading ? 'Connecting...' : 'Connect Sales Farma Propagandistas'}
+          </button>
+        </div>
+      );
+    }
+    if (connectorId === 'coachingqi_visits') {
+      const cleanUrl = coachingQiUrl.trim();
+      const cleanTenant = coachingQiTenant.trim() || 'achehomolog';
+      return (
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+            Configure a URL do CoachingQI/TargetAI e o tenant para ingestão e sincronização de visitas.
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginBottom: 8 }}>
+            Endpoint de ingestão: <code>POST http://localhost:8180/targetqi/visit-record</code>
+          </div>
+          <input
+            type="text"
+            value={coachingQiUrl}
+            onChange={(event) => setCoachingQiUrl(event.target.value)}
+            placeholder="https://cupomnichannel.close-upinternational.com/targetai"
+            style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
+          />
+          <input
+            type="text"
+            value={coachingQiTenant}
+            onChange={(event) => setCoachingQiTenant(event.target.value)}
+            placeholder="Tenant (ex: achehomolog)"
+            style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
+          />
+          <input
+            type="password"
+            value={coachingQiToken}
+            onChange={(event) => setCoachingQiToken(event.target.value)}
+            placeholder="API Key / Bearer token (opcional)"
+            style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}
+          />
+          <button
+            onClick={() => onConnect({
+              ...(coachingQiToken.trim() ? { token: coachingQiToken.trim() } : {}),
+              config: { url: cleanUrl, tenant: cleanTenant },
+            })}
+            disabled={loading || disabled || !cleanUrl}
+            style={{ width: '100%', padding: 8, background: loading || disabled || !cleanUrl ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || disabled || !cleanUrl ? 'default' : 'pointer' }}
+          >
+            {loading ? 'Connecting...' : 'Connect CoachingQI Visitas'}
           </button>
         </div>
       );
@@ -846,6 +930,15 @@ function DataSourcesSection() {
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [disconnectError, setDisconnectError] = useState<{ id: string; message: string } | null>(null);
   const disconnectAbortRef = useRef<AbortController | null>(null);
+  const [editingSalesFarma, setEditingSalesFarma] = useState(false);
+  const [editSalesFarmaUrl, setEditSalesFarmaUrl] = useState('https://demo.salesfarma.com.br/sincronia/api/omni/agent');
+  const [editSalesFarmaToken, setEditSalesFarmaToken] = useState('');
+  const [editSalesFarmaError, setEditSalesFarmaError] = useState('');
+  const [editingCoachingQi, setEditingCoachingQi] = useState(false);
+  const [editCoachingQiUrl, setEditCoachingQiUrl] = useState('https://cupomnichannel.close-upinternational.com/targetai/api/webhook-test/demo/targetqi/visit-record');
+  const [editCoachingQiTenant, setEditCoachingQiTenant] = useState('demo');
+  const [editCoachingQiToken, setEditCoachingQiToken] = useState('');
+  const [editCoachingQiError, setEditCoachingQiError] = useState('');
 
   const loadConnectors = useCallback(async () => {
     try {
@@ -1118,6 +1211,33 @@ function DataSourcesSection() {
                       </div>
                     )}
                   </div>
+                  {(c.connector_id === 'sales_farma' || c.connector_id === 'coachingqi_visits') && (
+                    <button
+                      onClick={() => {
+                        if (c.connector_id === 'sales_farma') {
+                          setEditingSalesFarma((prev) => !prev);
+                          setEditSalesFarmaError('');
+                        } else {
+                          setEditingCoachingQi((prev) => !prev);
+                          setEditCoachingQiError('');
+                        }
+                      }}
+                      disabled={connectorActionsBusy}
+                      className="hud-label"
+                      style={{
+                        padding: '6px 12px',
+                        background: 'transparent',
+                        color: 'var(--color-text-secondary)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 4,
+                        cursor: connectorActionsBusy ? 'default' : 'pointer',
+                        letterSpacing: '0.15em',
+                        opacity: connectorActionsBusy ? 0.5 : 1,
+                      }}
+                    >
+                      {(c.connector_id === 'sales_farma' ? editingSalesFarma : editingCoachingQi) ? 'Cancel' : 'Edit'}
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDisconnect(c.connector_id)}
                     disabled={connectorActionsBusy}
@@ -1138,6 +1258,116 @@ function DataSourcesSection() {
                       : sync?.state === 'stopping' ? 'Finish disconnect' : 'Disconnect'}
                   </button>
                 </div>
+                {c.connector_id === 'sales_farma' && editingSalesFarma && (
+                  <div style={{ padding: '0 18px 14px', borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+                      Atualize a URL da API ou Bearer token do Sales Farma Propagandistas:
+                    </div>
+                    <input
+                      type="text"
+                      value={editSalesFarmaUrl}
+                      onChange={(e) => setEditSalesFarmaUrl(e.target.value)}
+                      placeholder="https://demo.salesfarma.com.br/sincronia/api/omni/agent"
+                      style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
+                    />
+                    <input
+                      type="password"
+                      value={editSalesFarmaToken}
+                      onChange={(e) => setEditSalesFarmaToken(e.target.value)}
+                      placeholder="Bearer token (opcional)"
+                      style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}
+                    />
+                    {editSalesFarmaError && (
+                      <div style={{ fontSize: 11, color: 'var(--color-error)', marginBottom: 6 }}>
+                        {editSalesFarmaError}
+                      </div>
+                    )}
+                    <button
+                      onClick={async () => {
+                        const url = editSalesFarmaUrl.trim();
+                        if (!url) return;
+                        setLoading(true);
+                        setEditSalesFarmaError('');
+                        try {
+                          await connectSource('sales_farma', {
+                            ...(editSalesFarmaToken.trim() ? { token: editSalesFarmaToken.trim() } : {}),
+                            config: { url },
+                          });
+                          setEditingSalesFarma(false);
+                          await loadConnectors();
+                          void loadSyncStatuses();
+                        } catch (err: any) {
+                          setEditSalesFarmaError(err?.message || 'Failed to update Sales Farma config');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading || !editSalesFarmaUrl.trim()}
+                      style={{ width: '100%', padding: 8, background: loading || !editSalesFarmaUrl.trim() ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || !editSalesFarmaUrl.trim() ? 'default' : 'pointer' }}
+                    >
+                      {loading ? 'Saving...' : 'Save & Sync'}
+                    </button>
+                  </div>
+                )}
+                {c.connector_id === 'coachingqi_visits' && editingCoachingQi && (
+                  <div style={{ padding: '0 18px 14px', borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+                      Atualize a URL do TargetQI/CoachingQI, o tenant ou o token:
+                    </div>
+                    <input
+                      type="text"
+                      value={editCoachingQiUrl}
+                      onChange={(e) => setEditCoachingQiUrl(e.target.value)}
+                      placeholder="https://cupomnichannel.close-upinternational.com/targetai/api/webhook-test/demo/targetqi/visit-record"
+                      style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
+                    />
+                    <input
+                      type="text"
+                      value={editCoachingQiTenant}
+                      onChange={(e) => setEditCoachingQiTenant(e.target.value)}
+                      placeholder="Tenant (ex: demo)"
+                      style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
+                    />
+                    <input
+                      type="password"
+                      value={editCoachingQiToken}
+                      onChange={(e) => setEditCoachingQiToken(e.target.value)}
+                      placeholder="API Key / Bearer token (opcional)"
+                      style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}
+                    />
+                    {editCoachingQiError && (
+                      <div style={{ fontSize: 11, color: 'var(--color-error)', marginBottom: 6 }}>
+                        {editCoachingQiError}
+                      </div>
+                    )}
+                    <button
+                      onClick={async () => {
+                        const url = editCoachingQiUrl.trim();
+                        const tenant = editCoachingQiTenant.trim() || 'demo';
+                        if (!url) return;
+                        setLoading(true);
+                        setEditCoachingQiError('');
+                        try {
+                          await connectSource('coachingqi_visits', {
+                            ...(editCoachingQiToken.trim() ? { token: editCoachingQiToken.trim() } : {}),
+                            config: { url, tenant },
+                          });
+                          setEditingCoachingQi(false);
+                          await loadConnectors();
+                          void loadSyncStatuses();
+                        } catch (err: any) {
+                          setEditCoachingQiError(err?.message || 'Failed to update CoachingQI Visitas config');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading || !editCoachingQiUrl.trim()}
+                      style={{ width: '100%', padding: 8, background: loading || !editCoachingQiUrl.trim() ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || !editCoachingQiUrl.trim() ? 'default' : 'pointer' }}
+                    >
+                      {loading ? 'Saving...' : 'Save & Sync'}
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}

@@ -17,8 +17,30 @@ export const isTauri = () => typeof window !== 'undefined' && !!window.__TAURI_I
 
 export type CloudKeyStatus = Record<string, boolean>;
 
+export interface CloudConfigStatus {
+  keys: CloudKeyStatus;
+  azure_deployments: string[];
+  azure_endpoint: string;
+  azure_api_version: string;
+}
+
+export async function getCloudConfigStatus(): Promise<CloudConfigStatus> {
+  const res = await apiFetch('/v1/cloud/status');
+  if (!res.ok) {
+    throw new Error(`Failed to read cloud status (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function getCloudKeyStatus(): Promise<CloudKeyStatus> {
-  if (!isTauri()) return {};
+  if (!isTauri()) {
+    try {
+      const data = await getCloudConfigStatus();
+      return data.keys ?? {};
+    } catch {
+      return {};
+    }
+  }
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     const rows = await invoke<Array<{ key: string; set: boolean }>>('get_cloud_key_status');
@@ -28,9 +50,22 @@ export async function getCloudKeyStatus(): Promise<CloudKeyStatus> {
   }
 }
 
+export async function saveCloudKeys(keys: Record<string, string>): Promise<void> {
+  const res = await apiFetch('/v1/cloud/keys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keys }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(detail || `Failed to save cloud keys (${res.status})`);
+  }
+}
+
 export async function saveCloudKey(keyName: string, keyValue: string): Promise<void> {
   if (!isTauri()) {
-    throw new Error('Cloud API keys can be saved in the desktop app only.');
+    await saveCloudKeys({ [keyName]: keyValue });
+    return;
   }
   try {
     const { invoke } = await import('@tauri-apps/api/core');
@@ -400,17 +435,23 @@ export interface TtsHealth {
   backend?: string;
   voice_id?: string;
   speed?: number;
+  voices?: string[];
   reason?: string;
 }
 
 export async function synthesizeSpeech(
   text: string,
-  opts: { voiceId?: string; speed?: number; signal?: AbortSignal } = {},
+  opts: { voiceId?: string; speed?: number; language?: string; signal?: AbortSignal } = {},
 ): Promise<Blob> {
   const res = await apiFetch(`/v1/speech/synthesize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, voice_id: opts.voiceId, speed: opts.speed }),
+    body: JSON.stringify({
+      text,
+      voice_id: opts.voiceId,
+      speed: opts.speed,
+      language: opts.language,
+    }),
     signal: opts.signal,
   });
   if (!res.ok) {

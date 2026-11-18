@@ -8,8 +8,10 @@ import {
   fetchModels,
   preloadModel,
   isTauri,
+  getCloudConfigStatus,
   getCloudKeyStatus,
   saveCloudKey,
+  saveCloudKeys,
 } from '../lib/api';
 
 /** Popular models that users can download from the catalogue. */
@@ -81,6 +83,11 @@ const CLOUD_PROVIDERS: CloudProvider[] = [
       { id: 'atlascloud/Qwen/Qwen3-235B-A22B-Instruct-2507', desc: 'Qwen3 235B via Atlas Cloud' },
     ],
   },
+  {
+    name: 'Azure OpenAI',
+    envKey: 'AZURE_OPENAI_API_KEY',
+    models: [],
+  },
 ];
 
 type Tab = 'installed' | 'catalogue' | 'cloud';
@@ -108,21 +115,31 @@ export function CommandPalette() {
   const setModels = useAppStore((s) => s.setModels);
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
 
+  const [azureEndpoint, setAzureEndpoint] = useState('');
+  const [azureDeployment, setAzureDeployment] = useState('');
+  const [azureApiVersion, setAzureApiVersion] = useState('2024-10-21');
+  const [azureDeployments, setAzureDeployments] = useState<string[]>([]);
+
   const installedIds = new Set(models.map((m) => m.id));
   const desktopKeyStorage = isTauri();
 
   const refreshCloudKeyStatus = useCallback(async () => {
-    if (!desktopKeyStorage) {
-      setCloudKeyStatus({});
-      return;
-    }
     try {
-      setCloudKeyStatus(await getCloudKeyStatus());
+      if (desktopKeyStorage) {
+        setCloudKeyStatus(await getCloudKeyStatus());
+      } else {
+        const cfg = await getCloudConfigStatus();
+        setCloudKeyStatus(cfg.keys ?? {});
+        setAzureDeployments(cfg.azure_deployments ?? []);
+        if (cfg.azure_endpoint) setAzureEndpoint(cfg.azure_endpoint);
+        if (cfg.azure_deployments?.length) setAzureDeployment(cfg.azure_deployments.join(', '));
+        if (cfg.azure_api_version) setAzureApiVersion(cfg.azure_api_version);
+      }
       setCloudKeyError(null);
     } catch (e: any) {
       setCloudKeyError(e?.message || t('commandPalette.errors.readCloudKeyStatusFailed'));
     }
-  }, [desktopKeyStorage]);
+  }, [desktopKeyStorage, t]);
 
   const filtered = tab === 'installed'
     ? (query
@@ -245,6 +262,30 @@ export function CommandPalette() {
       await refreshModels();
     } catch (e: any) {
       setCloudKeyError(e?.message || t('commandPalette.errors.saveKeyFailed', { provider: provider.name }));
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  const handleSaveAzureConfig = async () => {
+    setSavingKey('AZURE_OPENAI_API_KEY');
+    setCloudKeyError(null);
+    try {
+      const updates: Record<string, string> = {
+        AZURE_OPENAI_ENDPOINT: azureEndpoint.trim(),
+        AZURE_OPENAI_DEPLOYMENT: azureDeployment.trim(),
+        AZURE_OPENAI_API_VERSION: azureApiVersion.trim() || '2024-10-21',
+      };
+      const typedKey = apiKeys['AZURE_OPENAI_API_KEY']?.trim();
+      if (typedKey) {
+        updates['AZURE_OPENAI_API_KEY'] = typedKey;
+      }
+      await saveCloudKeys(updates);
+      setApiKeys((prev) => ({ ...prev, AZURE_OPENAI_API_KEY: '' }));
+      await refreshCloudKeyStatus();
+      await refreshModels();
+    } catch (e: any) {
+      setCloudKeyError(e?.message || t('commandPalette.errors.saveKeyFailed', { provider: 'Azure OpenAI' }));
     } finally {
       setSavingKey(null);
     }
@@ -502,7 +543,7 @@ export function CommandPalette() {
                           onChange={(e) => setApiKeys((prev) => ({ ...prev, [provider.envKey]: e.target.value }))}
                           onBlur={() => handleKeyBlur(provider)}
                           placeholder={hasSavedKey ? t('commandPalette.cloud.savedInSecureStorage') : provider.envKey}
-                          disabled={!desktopKeyStorage || isSaving}
+                          disabled={isSaving}
                           className="flex-1 text-xs px-2 py-1.5 bg-transparent outline-none font-mono"
                           style={{ color: 'var(--color-text)' }}
                         />
@@ -525,10 +566,59 @@ export function CommandPalette() {
                       )}
                     </div>
 
+                    {/* Azure OpenAI endpoint / deployment / api-version */}
+                    {provider.envKey === 'AZURE_OPENAI_API_KEY' && (
+                      <div className="mb-2 flex flex-col gap-1.5">
+                        <input
+                          type="text"
+                          value={azureEndpoint}
+                          onChange={(e) => setAzureEndpoint(e.target.value)}
+                          placeholder="AZURE_OPENAI_ENDPOINT (https://<resource>.openai.azure.com)"
+                          disabled={isSaving}
+                          className="w-full text-xs px-2.5 py-1.5 rounded-lg outline-none font-mono"
+                          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                        />
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            value={azureDeployment}
+                            onChange={(e) => setAzureDeployment(e.target.value)}
+                            placeholder="Deployment(s) (ex: gpt-4o)"
+                            disabled={isSaving}
+                            className="flex-1 text-xs px-2.5 py-1.5 rounded-lg outline-none font-mono"
+                            style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                          />
+                          <input
+                            type="text"
+                            value={azureApiVersion}
+                            onChange={(e) => setAzureApiVersion(e.target.value)}
+                            placeholder="2024-10-21"
+                            disabled={isSaving}
+                            className="w-28 text-xs px-2.5 py-1.5 rounded-lg outline-none font-mono"
+                            style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                          />
+                          <button
+                            onClick={() => void handleSaveAzureConfig()}
+                            disabled={isSaving || !azureEndpoint.trim() || !azureDeployment.trim()}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-medium cursor-pointer disabled:opacity-40"
+                            style={{ background: 'var(--color-accent)', color: 'white' }}
+                          >
+                            {isSaving ? t('commandPalette.cloud.saving') : 'Salvar'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Models for this provider (only show if key is set) */}
                     {hasKey && (
                       <div className="ml-5 flex flex-col gap-1">
-                        {provider.models.map((model) => {
+                        {(provider.envKey === 'AZURE_OPENAI_API_KEY'
+                          ? azureDeployments.map((dep) => ({
+                              id: `azure/${dep}`,
+                              desc: `Azure OpenAI deployment (${dep})`,
+                            }))
+                          : provider.models
+                        ).map((model) => {
                           const isActive = model.id === selectedModel;
                           return (
                             <button
