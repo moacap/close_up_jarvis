@@ -3451,6 +3451,9 @@ export function AgentsPage() {
   const [templates, setTemplates] = useState<AgentTemplate[]>([]);
   const [showWizard, setShowWizard] = useState(false);
   const [detailTab, setDetailTab] = useState<'overview' | 'interact' | 'channels' | 'messaging' | 'tasks' | 'memory' | 'learning' | 'logs'>('interact');
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -3475,6 +3478,7 @@ export function AgentsPage() {
   const selectedAgent = managedAgents.find((a) => a.id === selectedAgentId);
 
   useEffect(() => {
+    setEditingName(false);
     if (selectedAgentId) {
       fetchAgentTasks(selectedAgentId).then(setTasks).catch(() => setTasks([]));
       fetchAgentChannels(selectedAgentId).then(setChannels).catch(() => setChannels([]));
@@ -3495,6 +3499,29 @@ export function AgentsPage() {
     await deleteManagedAgent(id).catch(() => {});
     if (selectedAgentId === id) setSelectedAgentId(null);
     await refresh();
+  };
+
+  const handleRename = async () => {
+    if (!selectedAgent || savingName) return;
+    const trimmed = nameDraft.trim();
+    if (!trimmed) {
+      toast.error('Nome do agente não pode ficar vazio');
+      return;
+    }
+    if (trimmed === selectedAgent.name) {
+      setEditingName(false);
+      return;
+    }
+    setSavingName(true);
+    try {
+      const updated = await updateManagedAgent(selectedAgent.id, { name: trimmed });
+      setManagedAgents(managedAgents.map((a) => (a.id === updated.id ? updated : a)));
+      setEditingName(false);
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao renomear agente');
+    } finally {
+      setSavingName(false);
+    }
   };
 
   const handleRun = async (id: string) => {
@@ -3610,9 +3637,69 @@ export function AgentsPage() {
           <div className="flex items-center gap-3">
             <Bot size={24} style={{ color: 'var(--color-accent)' }} />
             <div>
-              <h1 className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
-                {selectedAgent.name}
-              </h1>
+              {editingName ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        void handleRename();
+                      } else if (e.key === 'Escape') {
+                        setEditingName(false);
+                      }
+                    }}
+                    autoFocus
+                    disabled={savingName}
+                    className="px-2 py-0.5 text-lg font-semibold rounded border outline-none"
+                    style={{
+                      backgroundColor: 'var(--color-bg)',
+                      borderColor: 'var(--color-accent)',
+                      color: 'var(--color-text)',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleRename()}
+                    disabled={savingName}
+                    title="Salvar nome"
+                    className="p-1 rounded transition-colors cursor-pointer disabled:opacity-50"
+                    style={{ color: 'var(--color-success)' }}
+                  >
+                    {savingName ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingName(false)}
+                    disabled={savingName}
+                    title="Cancelar"
+                    className="p-1 rounded transition-colors cursor-pointer disabled:opacity-50"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
+                    {selectedAgent.name}
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNameDraft(selectedAgent.name);
+                      setEditingName(true);
+                    }}
+                    title="Editar nome do agente"
+                    className="p-1 rounded transition-colors cursor-pointer hover:opacity-80"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2 mt-1">
                 <StatusBadge status={selectedAgent.status} />
                 <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
