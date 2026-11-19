@@ -38,7 +38,7 @@ initApiBase().finally(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <ErrorBoundary>
-        <BrowserRouter>
+        <BrowserRouter basename={window.location.pathname.startsWith('/jarvis') ? '/jarvis' : '/'}>
           <App />
         </BrowserRouter>
       </ErrorBoundary>
