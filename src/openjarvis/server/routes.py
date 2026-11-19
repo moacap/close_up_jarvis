@@ -66,6 +66,7 @@ _CONNECTOR_QUERY_PATTERNS: tuple[tuple[str, re.Pattern[str], int], ...] = (
     ("apple_calendar", re.compile(r"\b(calend[áa]rio|calendar|agenda|reuni[ãõa]o|reuni[õo]es|compromissos?|eventos?)\b", re.I), 25),
     ("apple_notes", re.compile(r"\b(notas?|notes?|anota[çc][ãõo]es?|apple\s*notes)\b", re.I), 20),
     ("imessage", re.compile(r"\b(imessage|mensagens?|sms)\b", re.I), 20),
+    ("sales_farma_painel", re.compile(r"\b(painel|profissional|profissionais|crm|m[ée]dicos?|sales\s*farma\s*painel)\b", re.I), 25),
 )
 
 

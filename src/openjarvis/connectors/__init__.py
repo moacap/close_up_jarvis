@@ -149,6 +149,11 @@ except ImportError:
     pass
 
 try:
+    import openjarvis.connectors.sales_farma_painel  # noqa: F401
+except ImportError:
+    pass
+
+try:
     import openjarvis.connectors.coachingqi_visits  # noqa: F401
 except ImportError:
     pass

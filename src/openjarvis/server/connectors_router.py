@@ -198,7 +198,7 @@ def create_connectors_router():
                             "url": str(cfg["url"]),
                         }
                     )
-            elif connector_id == "sales_farma" and cfg.get("url"):
+            elif connector_id in ("sales_farma", "sales_farma_painel") and cfg.get("url"):
                 webhooks.append(
                     {
                         "label": "Endpoint configurado",
@@ -671,6 +671,17 @@ def create_connectors_router():
                 if not isinstance(url, str) or not url.strip():
                     raise HTTPException(
                         status_code=400, detail="Sales Farma API URL is required"
+                    )
+                instance.configure(url=url, token=req.token)
+
+            elif connector_id == "sales_farma_painel":
+                url = (req.config or {}).get(
+                    "url",
+                    "https://demo.salesfarma.com.br/sincronia/api/profissional/160115",
+                )
+                if not isinstance(url, str) or not url.strip():
+                    raise HTTPException(
+                        status_code=400, detail="Sales Farma Painel API URL is required"
                     )
                 instance.configure(url=url, token=req.token)
 

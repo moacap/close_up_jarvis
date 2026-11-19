@@ -165,6 +165,8 @@ function GenericConnectPanel({
   const [feedUrls, setFeedUrls] = useState('');
   const [salesFarmaUrl, setSalesFarmaUrl] = useState('https://demo.salesfarma.com.br/sincronia/api/omni/agent');
   const [salesFarmaToken, setSalesFarmaToken] = useState('');
+  const [salesFarmaPainelUrl, setSalesFarmaPainelUrl] = useState('https://demo.salesfarma.com.br/sincronia/api/profissional/160115');
+  const [salesFarmaPainelToken, setSalesFarmaPainelToken] = useState('');
   const [coachingQiUrl, setCoachingQiUrl] = useState('https://cupomnichannel.close-upinternational.com/targetai');
   const [coachingQiTenant, setCoachingQiTenant] = useState('achehomolog');
   const [coachingQiToken, setCoachingQiToken] = useState('');
@@ -241,6 +243,40 @@ function GenericConnectPanel({
             style={{ width: '100%', padding: 8, background: loading || disabled || !cleanUrl ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || disabled || !cleanUrl ? 'default' : 'pointer' }}
           >
             {loading ? 'Connecting...' : 'Connect Sales Farma Propagandistas'}
+          </button>
+        </div>
+      );
+    }
+    if (connectorId === 'sales_farma_painel') {
+      const cleanUrl = salesFarmaPainelUrl.trim();
+      return (
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 10 }}>
+            Informe a URL da API do Sales Farma Painel (e o token Bearer, se exigido).
+          </div>
+          <input
+            type="text"
+            value={salesFarmaPainelUrl}
+            onChange={(event) => setSalesFarmaPainelUrl(event.target.value)}
+            placeholder="https://demo.salesfarma.com.br/sincronia/api/profissional/160115"
+            style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
+          />
+          <input
+            type="password"
+            value={salesFarmaPainelToken}
+            onChange={(event) => setSalesFarmaPainelToken(event.target.value)}
+            placeholder="Bearer token (opcional)"
+            style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}
+          />
+          <button
+            onClick={() => onConnect({
+              ...(salesFarmaPainelToken.trim() ? { token: salesFarmaPainelToken.trim() } : {}),
+              config: { url: cleanUrl },
+            })}
+            disabled={loading || disabled || !cleanUrl}
+            style={{ width: '100%', padding: 8, background: loading || disabled || !cleanUrl ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || disabled || !cleanUrl ? 'default' : 'pointer' }}
+          >
+            {loading ? 'Connecting...' : 'Connect Sales Farma Painel'}
           </button>
         </div>
       );
@@ -950,6 +986,10 @@ const CONNECTOR_CHAT_EXAMPLES: Record<string, string[]> = {
     'Mostre os dados e indicadores do Sales Farma Propagandistas.',
     'Gere uma tabela HTML com as visitas dos propagandistas no Sales Farma.',
   ],
+  sales_farma_painel: [
+    'Liste os profissionais e CRMs do Sales Farma Painel.',
+    'Gere uma tabela HTML com especialidade, frequência e categoria do Sales Farma Painel.',
+  ],
   gmail: [
     'Resuma meus e-mails não lidos do Gmail hoje.',
     'Busque e-mails sobre proposta comercial no Gmail.',
@@ -1002,6 +1042,10 @@ function DataSourcesSection() {
   const [editSalesFarmaUrl, setEditSalesFarmaUrl] = useState('https://demo.salesfarma.com.br/sincronia/api/omni/agent');
   const [editSalesFarmaToken, setEditSalesFarmaToken] = useState('');
   const [editSalesFarmaError, setEditSalesFarmaError] = useState('');
+  const [editingSalesFarmaPainel, setEditingSalesFarmaPainel] = useState(false);
+  const [editSalesFarmaPainelUrl, setEditSalesFarmaPainelUrl] = useState('https://demo.salesfarma.com.br/sincronia/api/profissional/160115');
+  const [editSalesFarmaPainelToken, setEditSalesFarmaPainelToken] = useState('');
+  const [editSalesFarmaPainelError, setEditSalesFarmaPainelError] = useState('');
   const [editingCoachingQi, setEditingCoachingQi] = useState(false);
   const [editCoachingQiUrl, setEditCoachingQiUrl] = useState('https://cupomnichannel.close-upinternational.com/targetai/api/webhook-test/demo/targetqi/visit-record');
   const [editCoachingQiTenant, setEditCoachingQiTenant] = useState('demo');
@@ -1345,12 +1389,15 @@ function DataSourcesSection() {
                       </div>
                     )}
                   </div>
-                  {(c.connector_id === 'sales_farma' || c.connector_id === 'coachingqi_visits' || c.connector_id === 'news_rss') && (
+                  {(c.connector_id === 'sales_farma' || c.connector_id === 'sales_farma_painel' || c.connector_id === 'coachingqi_visits' || c.connector_id === 'news_rss') && (
                     <button
                       onClick={() => {
                         if (c.connector_id === 'sales_farma') {
                           setEditingSalesFarma((prev) => !prev);
                           setEditSalesFarmaError('');
+                        } else if (c.connector_id === 'sales_farma_painel') {
+                          setEditingSalesFarmaPainel((prev) => !prev);
+                          setEditSalesFarmaPainelError('');
                         } else if (c.connector_id === 'coachingqi_visits') {
                           setEditingCoachingQi((prev) => !prev);
                           setEditCoachingQiError('');
@@ -1374,6 +1421,8 @@ function DataSourcesSection() {
                     >
                       {(c.connector_id === 'sales_farma'
                         ? editingSalesFarma
+                        : c.connector_id === 'sales_farma_painel'
+                        ? editingSalesFarmaPainel
                         : c.connector_id === 'coachingqi_visits'
                         ? editingCoachingQi
                         : editingNewsRss) ? t('pages.dataSources.cancel') : t('pages.dataSources.edit')}
@@ -1464,6 +1513,57 @@ function DataSourcesSection() {
                       }}
                       disabled={loading || !editSalesFarmaUrl.trim()}
                       style={{ width: '100%', padding: 8, background: loading || !editSalesFarmaUrl.trim() ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || !editSalesFarmaUrl.trim() ? 'default' : 'pointer' }}
+                    >
+                      {loading ? 'Saving...' : 'Save & Sync'}
+                    </button>
+                  </div>
+                )}
+                {c.connector_id === 'sales_farma_painel' && editingSalesFarmaPainel && (
+                  <div style={{ padding: '0 18px 14px', borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+                      Atualize a URL da API ou Bearer token do Sales Farma Painel:
+                    </div>
+                    <input
+                      type="text"
+                      value={editSalesFarmaPainelUrl}
+                      onChange={(e) => setEditSalesFarmaPainelUrl(e.target.value)}
+                      placeholder="https://demo.salesfarma.com.br/sincronia/api/profissional/160115"
+                      style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
+                    />
+                    <input
+                      type="password"
+                      value={editSalesFarmaPainelToken}
+                      onChange={(e) => setEditSalesFarmaPainelToken(e.target.value)}
+                      placeholder="Bearer token (opcional)"
+                      style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}
+                    />
+                    {editSalesFarmaPainelError && (
+                      <div style={{ fontSize: 11, color: 'var(--color-error)', marginBottom: 6 }}>
+                        {editSalesFarmaPainelError}
+                      </div>
+                    )}
+                    <button
+                      onClick={async () => {
+                        const url = editSalesFarmaPainelUrl.trim();
+                        if (!url) return;
+                        setLoading(true);
+                        setEditSalesFarmaPainelError('');
+                        try {
+                          await connectSource('sales_farma_painel', {
+                            ...(editSalesFarmaPainelToken.trim() ? { token: editSalesFarmaPainelToken.trim() } : {}),
+                            config: { url },
+                          });
+                          setEditingSalesFarmaPainel(false);
+                          await loadConnectors();
+                          void loadSyncStatuses();
+                        } catch (err: any) {
+                          setEditSalesFarmaPainelError(err?.message || 'Failed to update Sales Farma Painel config');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading || !editSalesFarmaPainelUrl.trim()}
+                      style={{ width: '100%', padding: 8, background: loading || !editSalesFarmaPainelUrl.trim() ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || !editSalesFarmaPainelUrl.trim() ? 'default' : 'pointer' }}
                     >
                       {loading ? 'Saving...' : 'Save & Sync'}
                     </button>
