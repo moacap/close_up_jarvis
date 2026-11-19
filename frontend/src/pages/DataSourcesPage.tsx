@@ -1130,7 +1130,7 @@ function DataSourcesSection() {
     return connectors.filter((c) => c.connector_id !== 'gmail');
   })();
 
-  const HIDDEN_CONNECTORS = new Set(['apple_music', 'spotify', 'oura', 'strava']);
+  const HIDDEN_CONNECTORS = new Set(['apple_music', 'spotify', 'oura', 'strava', 'hackernews']);
   const visibleConnectors = unifiedConnectors.filter((c) => !HIDDEN_CONNECTORS.has(c.connector_id));
   const connected = visibleConnectors.filter((c) => c.connected);
   const notConnectedBase = visibleConnectors.filter((c) => !c.connected);
