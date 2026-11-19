@@ -939,6 +939,9 @@ function DataSourcesSection() {
   const [editCoachingQiTenant, setEditCoachingQiTenant] = useState('demo');
   const [editCoachingQiToken, setEditCoachingQiToken] = useState('');
   const [editCoachingQiError, setEditCoachingQiError] = useState('');
+  const [editingNewsRss, setEditingNewsRss] = useState(false);
+  const [editNewsRssFeeds, setEditNewsRssFeeds] = useState('');
+  const [editNewsRssError, setEditNewsRssError] = useState('');
 
   const loadConnectors = useCallback(async () => {
     try {
@@ -1213,15 +1216,18 @@ function DataSourcesSection() {
                       </div>
                     )}
                   </div>
-                  {(c.connector_id === 'sales_farma' || c.connector_id === 'coachingqi_visits') && (
+                  {(c.connector_id === 'sales_farma' || c.connector_id === 'coachingqi_visits' || c.connector_id === 'news_rss') && (
                     <button
                       onClick={() => {
                         if (c.connector_id === 'sales_farma') {
                           setEditingSalesFarma((prev) => !prev);
                           setEditSalesFarmaError('');
-                        } else {
+                        } else if (c.connector_id === 'coachingqi_visits') {
                           setEditingCoachingQi((prev) => !prev);
                           setEditCoachingQiError('');
+                        } else {
+                          setEditingNewsRss((prev) => !prev);
+                          setEditNewsRssError('');
                         }
                       }}
                       disabled={connectorActionsBusy}
@@ -1237,7 +1243,11 @@ function DataSourcesSection() {
                         opacity: connectorActionsBusy ? 0.5 : 1,
                       }}
                     >
-                      {(c.connector_id === 'sales_farma' ? editingSalesFarma : editingCoachingQi) ? 'Cancel' : 'Edit'}
+                      {(c.connector_id === 'sales_farma'
+                        ? editingSalesFarma
+                        : c.connector_id === 'coachingqi_visits'
+                        ? editingCoachingQi
+                        : editingNewsRss) ? 'Cancel' : 'Edit'}
                     </button>
                   )}
                   <button
@@ -1365,6 +1375,51 @@ function DataSourcesSection() {
                       }}
                       disabled={loading || !editCoachingQiUrl.trim()}
                       style={{ width: '100%', padding: 8, background: loading || !editCoachingQiUrl.trim() ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || !editCoachingQiUrl.trim() ? 'default' : 'pointer' }}
+                    >
+                      {loading ? 'Saving...' : 'Save & Sync'}
+                    </button>
+                  </div>
+                )}
+                {c.connector_id === 'news_rss' && editingNewsRss && (
+                  <div style={{ padding: '0 18px 14px', borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+                      Adicione uma URL de feed RSS ou Atom por linha:
+                    </div>
+                    <textarea
+                      value={editNewsRssFeeds}
+                      onChange={(e) => setEditNewsRssFeeds(e.target.value)}
+                      placeholder={'https://example.com/feed.xml\nhttps://example.org/rss'}
+                      rows={4}
+                      style={{ width: '100%', padding: '7px 10px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}
+                    />
+                    {editNewsRssError && (
+                      <div style={{ fontSize: 11, color: 'var(--color-error)', marginBottom: 6 }}>
+                        {editNewsRssError}
+                      </div>
+                    )}
+                    <button
+                      onClick={async () => {
+                        const feeds = editNewsRssFeeds
+                          .split('\n')
+                          .map((u) => u.trim())
+                          .filter(Boolean)
+                          .map((url) => ({ url }));
+                        if (feeds.length === 0) return;
+                        setLoading(true);
+                        setEditNewsRssError('');
+                        try {
+                          await connectSource('news_rss', { config: { feeds } });
+                          setEditingNewsRss(false);
+                          await loadConnectors();
+                          void loadSyncStatuses();
+                        } catch (err: any) {
+                          setEditNewsRssError(err?.message || 'Failed to update News / RSS feeds');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading || editNewsRssFeeds.split('\n').every((u) => !u.trim())}
+                      style={{ width: '100%', padding: 8, background: loading || editNewsRssFeeds.split('\n').every((u) => !u.trim()) ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || editNewsRssFeeds.split('\n').every((u) => !u.trim()) ? 'default' : 'pointer' }}
                     >
                       {loading ? 'Saving...' : 'Save & Sync'}
                     </button>
