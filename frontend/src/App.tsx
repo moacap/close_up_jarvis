@@ -13,10 +13,8 @@ import { SetupScreen } from './components/SetupScreen';
 import { Toaster } from './components/ui/sonner';
 import { useAppStore } from './lib/store';
 import { fetchModels, fetchServerInfo, fetchSavings, submitSavings, isTauri } from './lib/api';
-import { OptInModal } from './components/OptInModal';
 import { UpdateChecker } from './components/Desktop/UpdateChecker';
 import { track, hashId } from './lib/analytics';
-import { offerAnalyticsChoice } from './lib/analytics-invitation';
 
 export default function App() {
   const [setupDone, setSetupDone] = useState(!isTauri());
@@ -42,10 +40,6 @@ export default function App() {
   const optInDisplayName = useAppStore((s) => s.optInDisplayName);
   const optInEmail = useAppStore((s) => s.optInEmail);
   const optInAnonId = useAppStore((s) => s.optInAnonId);
-  const optInModalSeen = useAppStore((s) => s.optInModalSeen);
-  const optInModalOpen = useAppStore((s) => s.optInModalOpen);
-  const setOptInModalOpen = useAppStore((s) => s.setOptInModalOpen);
-  const markOptInModalSeen = useAppStore((s) => s.markOptInModalSeen);
   const savings = useAppStore((s) => s.savings);
 
   // Apply theme class to <html>
@@ -127,14 +121,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [optInEnabled, optInDisplayName, optInEmail, optInAnonId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Wait for desktop setup before fetching identity or marking the dialog seen.
-  useEffect(() => offerAnalyticsChoice({
-    ready: setupDone,
-    sharingModalSeen: optInModalSeen,
-    open: () => setOptInModalOpen(true),
-    markSharingModalSeen: markOptInModalSeen,
-  }), [setupDone, optInModalSeen, setOptInModalOpen, markOptInModalSeen]);
-
   // Fire model_changed when the user switches models. First mount is
   // not a "change" — only emit when both prev and current are real and
   // differ.
@@ -204,9 +190,6 @@ export default function App() {
       </Routes>
       <Toaster position="bottom-right" />
       {commandPaletteOpen && <CommandPalette />}
-      {optInModalOpen && (
-        <OptInModal onClose={() => setOptInModalOpen(false)} />
-      )}
     </>
   );
 }
