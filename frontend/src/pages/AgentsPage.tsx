@@ -1535,7 +1535,7 @@ function AgentConfigGrid({ agent, onAgentUpdated }: { agent: ManagedAgent; onAge
     [t('pages.agents.agentConfigGrid.schedule'), <span key="sc">{formatAgentSchedule(agent, t)}</span>],
     [t('pages.agents.agentConfigGrid.lastRun'), <span key="lr">{formatRelativeTime(agent.last_run_at, t)}</span>],
     [t('pages.agents.agentConfigGrid.budget'), <span key="bg">{agent.budget ? formatCost(agent.budget) : t('pages.agents.launchWizard.unlimitedPlaceholder')}</span>],
-    [t('pages.agents.agentConfigGrid.learning'), <span key="le">{agent.learning_enabled ? t('pages.agents.common.enabled') : t('pages.agents.common.disabled')}</span>],
+    [t('pages.agents.agentConfigGrid.learning'), <span key="le">{(agent.learning_enabled ?? agent.config?.learning_enabled) ? t('pages.agents.common.enabled') : t('pages.agents.common.disabled')}</span>],
   ];
 
   return (
@@ -2035,8 +2035,18 @@ function ChannelsTab({ agentId }: { agentId: string }) {
     }
   };
 
-  const connected = connectors.filter((c) => c.connected);
-  const notConnected = connectors.filter((c) => !c.connected);
+  const hiddenConnectors = new Set([
+    'apple_music',
+    'spotify',
+    'oura',
+    'oura_ring',
+    'strava',
+    'hackernews',
+    'hacker_news',
+  ]);
+  const visibleConnectors = connectors.filter((c) => !hiddenConnectors.has(c.connector_id));
+  const connected = visibleConnectors.filter((c) => c.connected);
+  const notConnected = visibleConnectors.filter((c) => !c.connected);
 
   // Merge with SOURCE_CATALOG for icons/descriptions
   const getMeta = (id: string) =>
@@ -3158,21 +3168,48 @@ function MessagingTab({ agentId }: { agentId: string }) {
 // Learning tab component
 // ---------------------------------------------------------------------------
 
-function LearningTab({ agentId, learningEnabled }: { agentId: string; learningEnabled: boolean }) {
+function LearningTab({
+  agent,
+  onRefresh,
+}: {
+  agent: ManagedAgent;
+  onRefresh: () => Promise<void> | void;
+}) {
   const { t } = useTranslation();
   const [logs, setLogs] = useState<LearningLogEntry[]>([]);
   const [triggering, setTriggering] = useState(false);
+  const [toggling, setToggling] = useState(false);
+  const learningEnabled = Boolean(agent.learning_enabled ?? agent.config?.learning_enabled);
 
   useEffect(() => {
-    fetchLearningLog(agentId).then(setLogs).catch(() => {});
-  }, [agentId]);
+    fetchLearningLog(agent.id).then(setLogs).catch(() => {});
+  }, [agent.id]);
+
+  async function handleToggleLearning() {
+    if (toggling) return;
+    setToggling(true);
+    try {
+      await updateManagedAgent(agent.id, {
+        config: {
+          ...(agent.config || {}),
+          learning_enabled: !learningEnabled,
+        },
+      });
+      await onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao atualizar aprendizado');
+    } finally {
+      setToggling(false);
+    }
+  }
 
   async function handleTrigger() {
     setTriggering(true);
     try {
-      await triggerLearning(agentId);
+      await triggerLearning(agent.id);
+      await onRefresh();
       // Refresh after a short delay
-      setTimeout(() => fetchLearningLog(agentId).then(setLogs).catch(() => {}), 1000);
+      setTimeout(() => fetchLearningLog(agent.id).then(setLogs).catch(() => {}), 1000);
     } catch {
       // ignore
     } finally {
@@ -3185,15 +3222,24 @@ function LearningTab({ agentId, learningEnabled }: { agentId: string; learningEn
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{t('pages.agents.learningTab.title')}</span>
-          <span
-            className="text-xs px-2 py-0.5 rounded-full"
+          <button
+            type="button"
+            onClick={() => void handleToggleLearning()}
+            disabled={toggling}
+            title={learningEnabled ? 'Clique para desabilitar o aprendizado' : 'Clique para habilitar o aprendizado'}
+            className="text-xs px-2.5 py-0.5 rounded-full cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50"
             style={{
               background: learningEnabled ? 'var(--color-success)20' : 'var(--color-bg-secondary)',
               color: learningEnabled ? 'var(--color-success)' : 'var(--color-text-tertiary)',
+              border: '1px solid var(--color-border)',
             }}
           >
-            {learningEnabled ? t('pages.agents.common.enabled') : t('pages.agents.common.disabled')}
-          </span>
+            {toggling
+              ? '...'
+              : learningEnabled
+              ? t('pages.agents.common.enabled')
+              : `${t('pages.agents.common.disabled')} (Habilitar)`}
+          </button>
         </div>
         <button
           onClick={handleTrigger}
@@ -3997,7 +4043,7 @@ export function AgentsPage() {
 
         {/* Tab: Learning */}
         {detailTab === 'learning' && (
-          <LearningTab agentId={selectedAgent.id} learningEnabled={!!selectedAgent.learning_enabled} />
+          <LearningTab agent={selectedAgent} onRefresh={refresh} />
         )}
 
         {/* Tab: Logs */}

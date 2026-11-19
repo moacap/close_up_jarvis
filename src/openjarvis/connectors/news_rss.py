@@ -188,7 +188,11 @@ def _request_feed(url: str, target: _FeedTarget) -> httpx.Response:
                         "application/rss+xml, application/atom+xml, "
                         "application/xml, text/xml;q=0.9, */*;q=0.1"
                     ),
-                    "User-Agent": "OpenJarvis-RSS/1.0",
+                    "User-Agent": (
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/128.0.0.0 Safari/537.36"
+                    ),
                     "Connection": "close",
                 },
             )
@@ -353,10 +357,6 @@ class NewsRSSConnector(BaseConnector):
             items = _parse_rss_items(xml_text)
             for item in items:
                 pub_dt = _parse_pub_date(item["pubDate"])
-
-                # Filter by since if the date is parseable
-                if since and pub_dt and pub_dt.replace(tzinfo=None) < since:
-                    continue
 
                 title = item["title"] or "Untitled"
                 doc_id = f"rss-{feed_name}-{title[:40]}"

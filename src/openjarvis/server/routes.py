@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import re
 import threading
 import uuid
 import weakref
@@ -56,6 +58,72 @@ def _to_messages(chat_messages) -> list[Message]:
             )
         )
     return messages
+
+
+_CONNECTOR_QUERY_PATTERNS: tuple[tuple[str, re.Pattern[str], int], ...] = (
+    ("news_rss", re.compile(r"\b(rss|feeds?|not[íi]cias?|news|labroots)\b", re.I), 10),
+    ("apple_contacts", re.compile(r"\b(contatos?|contacts?|telefone|e-?mail|apple\s*contacts)\b", re.I), 25),
+    ("apple_calendar", re.compile(r"\b(calend[áa]rio|calendar|agenda|reuni[ãõa]o|reuni[õo]es|compromissos?|eventos?)\b", re.I), 25),
+    ("apple_notes", re.compile(r"\b(notas?|notes?|anota[çc][ãõo]es?|apple\s*notes)\b", re.I), 20),
+    ("imessage", re.compile(r"\b(imessage|mensagens?|sms)\b", re.I), 20),
+)
+
+
+def _build_connector_context(messages: list[Message]) -> str:
+    """Return KnowledgeStore records for connected sources mentioned in the last user message."""
+    last_user = next((m.text for m in reversed(messages) if m.role == Role.USER and m.text), "")
+    if not last_user:
+        return ""
+
+    matched = [
+        (src, limit)
+        for src, pat, limit in _CONNECTOR_QUERY_PATTERNS
+        if pat.search(last_user)
+    ]
+    if not matched:
+        return ""
+
+    sections: list[str] = []
+    try:
+        from openjarvis.connectors.store import KnowledgeStore
+        from openjarvis.core.paths import get_config_dir
+
+        with KnowledgeStore() as store:
+            for src, limit in matched:
+                if src == "news_rss":
+                    cfg_path = get_config_dir() / "connectors" / "news_rss.json"
+                    if cfg_path.exists():
+                        try:
+                            feeds = json.loads(cfg_path.read_text(encoding="utf-8")).get("feeds", [])
+                            if feeds:
+                                feed_lines = ", ".join(
+                                    f"{f.get('name', '')} ({f.get('url', '')})" for f in feeds
+                                )
+                                sections.append(f"Feeds RSS configurados: {feed_lines}")
+                        except Exception:
+                            pass
+                rows = store._conn.execute(
+                    "SELECT title, content, url, timestamp FROM knowledge_chunks "
+                    "WHERE source = ? ORDER BY rowid DESC LIMIT ?",
+                    (src, limit),
+                ).fetchall()
+                if rows:
+                    lines = []
+                    for title, content, url, ts in rows:
+                        snippet = (content or "").strip().replace("\n", " ")[:350]
+                        part = f"- {title or '(sem título)'}"
+                        if ts:
+                            part += f" [{ts}]"
+                        if snippet:
+                            part += f": {snippet}"
+                        if url:
+                            part += f" ({url})"
+                        lines.append(part)
+                    sections.append(f"Dados indexados de `{src}`:\n" + "\n".join(lines))
+    except Exception:
+        return ""
+
+    return "\n\n".join(sections)
 
 
 def _ensure_identity_prompt(messages: list[Message], app_config) -> list[Message]:
@@ -124,6 +192,20 @@ def _ensure_identity_prompt(messages: list[Message], app_config) -> list[Message
     system_parts = []
     if prompt:
         system_parts.append(prompt)
+    system_parts.append(
+        "Fontes de dados conectadas (KnowledgeStore): use `knowledge_sql` "
+        "(ex.: `SELECT title, content, url, timestamp FROM knowledge_chunks "
+        "WHERE source = 'news_rss' ORDER BY timestamp DESC LIMIT 10`) ou "
+        "`knowledge_search` para consultar documentos sincronizados por `source`: "
+        "`news_rss` (News / RSS, config em `~/.openjarvis/connectors/news_rss.json`), "
+        "`sales_farma` (Sales Farma Propagandistas), `coachingqi_visits` (TagetIQ), "
+        "`apple_calendar`, `apple_contacts`, `apple_notes` e `imessage`. "
+        "NUNCA use `shell_exec` para procurar arquivos de configuração de conectores; "
+        "consulte diretamente `knowledge_sql` ou `knowledge_search`."
+    )
+    connector_ctx = _build_connector_context(messages)
+    if connector_ctx:
+        system_parts.append(connector_ctx)
     system_parts.extend(message.text for message in system_messages if message.text)
     non_system_messages = [
         message for message in messages if message.role != Role.SYSTEM
@@ -1137,6 +1219,22 @@ async def chat_completions(request_body: ChatCompletionRequest, request: Request
                     config=ctx_cfg,
                     facts=facts,
                 )
+                connector_ctx = _build_connector_context(messages)
+                if connector_ctx:
+                    if enriched and enriched[0].role == Role.SYSTEM:
+                        enriched[0] = replace(
+                            enriched[0],
+                            content=f"{enriched[0].text}\n\n{connector_ctx}".strip(),
+                        )
+                    else:
+                        enriched.insert(
+                            0,
+                            Message(
+                                role=Role.SYSTEM,
+                                content=connector_ctx,
+                                metadata={"memory_context": True},
+                            ),
+                        )
                 # Rebuild after identity/context merging so downstream engine
                 # adapters always receive exactly one system message.
                 from openjarvis.server.models import ChatMessage

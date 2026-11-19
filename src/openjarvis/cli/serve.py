@@ -32,6 +32,7 @@ _DEFAULT_TOOLS = frozenset(
         "calculator",
         "web_search",
         "knowledge_search",
+        "knowledge_sql",
         "visit_ingest",
         "file_read",
         "file_write",

@@ -291,6 +291,7 @@ def _make_lightweight_system(
     could interfere with in-flight requests).
     """
     try:
+        import os
         from openjarvis.engine._discovery import get_engine
 
         cfg = config
@@ -299,12 +300,63 @@ def _make_lightweight_system(
 
             cfg = load_config()
 
+        resolved_model = (model or "").strip() or (
+            getattr(cfg.intelligence, "default_model", "") or ""
+        ).strip()
+
+        has_azure = bool(
+            os.environ.get("AZURE_OPENAI_API_KEY")
+            and os.environ.get("AZURE_OPENAI_ENDPOINT")
+        )
+        has_cloud_env = has_azure or any(
+            os.environ.get(k)
+            for k in (
+                "OPENAI_API_KEY",
+                "ANTHROPIC_API_KEY",
+                "GEMINI_API_KEY",
+                "GOOGLE_API_KEY",
+                "OPENROUTER_API_KEY",
+                "DEEPSEEK_API_KEY",
+            )
+        )
+        cloud_prefixes = (
+            "azure/",
+            "openai/",
+            "anthropic/",
+            "google/",
+            "gemini/",
+            "deepseek/",
+            "openrouter/",
+            "minimax/",
+            "atlas/",
+            "codex/",
+        )
+        is_cloud_model = resolved_model.startswith(cloud_prefixes)
+
         pref = cfg.intelligence.preferred_engine
         key = pref or cfg.engine.default
-        resolved = get_engine(cfg, key)
+        resolved = None if is_cloud_model else get_engine(cfg, key)
 
-        if resolved is not None:
+        if is_cloud_model or (resolved is None and has_cloud_env):
+            from openjarvis.engine.cloud import CloudEngine
+
+            plain_engine = CloudEngine()
+            if not is_cloud_model:
+                try:
+                    avail = plain_engine.list_models()
+                except Exception:
+                    avail = []
+                if "azure/gpt-5.4" in avail:
+                    resolved_model = "azure/gpt-5.4"
+                elif avail:
+                    resolved_model = avail[0]
+                elif has_azure:
+                    dep = (os.environ.get("AZURE_OPENAI_DEPLOYMENT") or "").strip() or "gpt-5.4"
+                    resolved_model = f"azure/{dep}"
+        elif resolved is not None:
             plain_engine = resolved[1]
+        elif engine is not None:
+            plain_engine = engine
         else:
             from openjarvis.engine.ollama import OllamaEngine
 
@@ -324,7 +376,7 @@ def _make_lightweight_system(
             )
         except Exception:
             pass  # telemetry is optional
-        return _LightweightSystem(plain_engine, model, cfg, runtime)
+        return _LightweightSystem(plain_engine, resolved_model, cfg, runtime)
     except Exception:
         pass
     return _LightweightSystem(engine, model, config, runtime)
@@ -2241,13 +2293,46 @@ def create_agent_manager_router(
 
     @agents_router.post("/{agent_id}/learning/run")
     def trigger_learning(agent_id: str, request: Request):
-        if not manager.get_agent(agent_id):
+        agent = manager.get_agent(agent_id)
+        if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
         from openjarvis.core.events import EventType
 
         bus = _get_runtime_event_bus(request.app.state)
         bus.publish(EventType.AGENT_LEARNING_STARTED, {"agent_id": agent_id})
-        return {"status": "triggered"}
+
+        cfg = dict(agent.get("config") or {})
+        if not cfg.get("learning_enabled"):
+            cfg["learning_enabled"] = True
+            manager.update_agent(agent_id, config=cfg)
+
+        trace_count = 0
+        try:
+            from openjarvis.core.config import load_config
+            from openjarvis.core.paths import get_config_dir
+            from openjarvis.traces.store import TraceStore
+
+            config = load_config()
+            store = TraceStore(
+                config.traces.db_path or str(get_config_dir() / "traces.db")
+            )
+            trace_count = len(store.list_traces(agent=agent_id, limit=50))
+        except Exception:
+            pass
+
+        entry = manager.add_learning_log(
+            agent_id,
+            "learning_cycle",
+            description=(
+                f"Ciclo de aprendizado executado ({trace_count} trace(s) analisado(s))."
+            ),
+            data={"traces_analyzed": trace_count, "learning_enabled": True},
+        )
+        bus.publish(
+            EventType.AGENT_LEARNING_COMPLETED,
+            {"agent_id": agent_id, "log_id": entry["id"], "traces_analyzed": trace_count},
+        )
+        return {"status": "triggered", "learning_enabled": True, "log_entry": entry}
 
     # ── Traces ───────────────────────────────────────────────
 
