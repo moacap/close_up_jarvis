@@ -509,9 +509,9 @@ export function SettingsPage() {
                 onChange={(e) => { updateSettings({ fontSize: e.target.value as any }); showSaved(); }}
                 className="text-sm px-3 py-1.5 rounded-lg outline-none cursor-pointer"
                 style={{
-                  background: 'var(--color-bg-secondary)',
+                  background: 'var(--color-input-bg)',
                   color: 'var(--color-text)',
-                  border: '1px solid var(--color-border)',
+                  border: '1px solid var(--color-input-border)',
                 }}
               >
                 <option value="small">{t('settings.appearance.fontSize.small')}</option>
@@ -526,9 +526,9 @@ export function SettingsPage() {
                 onChange={(e) => { updateSettings({ language: e.target.value as Language }); showSaved(); }}
                 className="text-sm px-3 py-1.5 rounded-lg outline-none cursor-pointer"
                 style={{
-                  background: 'var(--color-bg-secondary)',
+                  background: 'var(--color-input-bg)',
                   color: 'var(--color-text)',
-                  border: '1px solid var(--color-border)',
+                  border: '1px solid var(--color-input-border)',
                 }}
               >
                 <option value="en">English</option>
@@ -546,9 +546,9 @@ export function SettingsPage() {
                 onChange={(e) => { updateSettings({ timeZone: e.target.value }); showSaved(); }}
                 className="text-sm px-3 py-1.5 rounded-lg outline-none cursor-pointer max-w-[14rem]"
                 style={{
-                  background: 'var(--color-bg-secondary)',
+                  background: 'var(--color-input-bg)',
                   color: 'var(--color-text)',
-                  border: '1px solid var(--color-border)',
+                  border: '1px solid var(--color-input-border)',
                 }}
               >
                 <option value="">{t('settings.appearance.timeZone.automatic', { zone: deviceTimeZone() })}</option>
@@ -580,9 +580,9 @@ export function SettingsPage() {
                 placeholder="http://localhost:8000"
                 className="text-sm px-3 py-1.5 rounded-lg outline-none w-56"
                 style={{
-                  background: 'var(--color-bg-secondary)',
+                  background: 'var(--color-input-bg)',
                   color: 'var(--color-text)',
-                  border: '1px solid var(--color-border)',
+                  border: '1px solid var(--color-input-border)',
                 }}
               />
             </SettingRow>
@@ -595,9 +595,9 @@ export function SettingsPage() {
                 autoComplete="off"
                 className="text-sm px-3 py-1.5 rounded-lg outline-none w-56"
                 style={{
-                  background: 'var(--color-bg-secondary)',
+                  background: 'var(--color-input-bg)',
                   color: 'var(--color-text)',
-                  border: '1px solid var(--color-border)',
+                  border: '1px solid var(--color-input-border)',
                 }}
               />
             </SettingRow>
@@ -748,9 +748,9 @@ export function SettingsPage() {
                 }}
                 className="text-sm px-3 py-1.5 rounded-lg outline-none cursor-pointer"
                 style={{
-                  background: 'var(--color-bg-secondary)',
+                  background: 'var(--color-input-bg)',
                   color: 'var(--color-text)',
-                  border: '1px solid var(--color-border)',
+                  border: '1px solid var(--color-input-border)',
                 }}
               >
                 <option value="sqlite">sqlite</option>
