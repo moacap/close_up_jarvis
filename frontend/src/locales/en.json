@@ -1016,7 +1016,9 @@
         "mac-intel": "macOS (Intel)",
         "windows": "Windows (64-bit)",
         "linux-deb": "Linux (DEB)",
-        "linux-rpm": "Linux (RPM)"
+        "linux-rpm": "Linux (RPM)",
+        "ios": "iOS",
+        "android": "Android"
       },
       "cliSectionTitle": "Command Line (macOS / Linux)",
       "cloneInstallInstruction": "Clone and install (Python 3.10+ required):",

@@ -8,6 +8,7 @@ import {
   Globe,
   Monitor,
   Apple,
+  Smartphone,
   ChevronDown,
   ChevronRight,
   Copy,
@@ -65,6 +66,20 @@ const PLATFORMS: Platform[] = [
     shortLabel: 'Linux (RPM)',
     file: 'OpenJarvis_x86_64.rpm',
     icon: Terminal,
+  },
+  {
+    id: 'ios',
+    label: 'iOS',
+    shortLabel: 'iOS',
+    file: 'CloseUP_iOS.ipa',
+    icon: Smartphone,
+  },
+  {
+    id: 'android',
+    label: 'Android',
+    shortLabel: 'Android',
+    file: 'CloseUP_Android.apk',
+    icon: Smartphone,
   },
 ];
 
@@ -400,40 +415,6 @@ function SelfHostedView() {
             ))}
           </div>
         </div>
-      </div>
-
-      {/* CLI + Browser sections */}
-      <div className="flex flex-col gap-3 mb-10">
-        <Section icon={Terminal} title={t('pages.getStarted.cliSectionTitle')} defaultOpen>
-          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('pages.getStarted.cloneInstallInstruction')}
-          </p>
-          <CodeBlock code={"git clone https://github.com/open-jarvis/OpenJarvis.git\ncd OpenJarvis\nuv sync"} />
-          <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('pages.getStarted.getStartedInstruction')}
-          </p>
-          <CodeBlock code={"jarvis init\njarvis doctor\njarvis chat"} />
-        </Section>
-
-        <Section icon={Globe} title={t('pages.getStarted.browserSectionTitle')}>
-          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('pages.getStarted.launchApiInstruction')}
-          </p>
-          <CodeBlock code={"git clone https://github.com/open-jarvis/OpenJarvis.git\ncd OpenJarvis\nuv sync --extra desktop\njarvis serve --port 8000"} />
-          <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-            {t('pages.getStarted.browserFeaturesDescription')}
-          </p>
-        </Section>
-
-        <Section icon={Globe} title={t('pages.getStarted.dockerSectionTitle')}>
-          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('pages.getStarted.dockerDeployInstruction')}
-          </p>
-          <CodeBlock code={"git clone https://github.com/open-jarvis/OpenJarvis.git\ncd OpenJarvis\ndocker compose -f deploy/docker/docker-compose.yml up -d"} />
-          <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-            {t('pages.getStarted.dockerDescription')}
-          </p>
-        </Section>
       </div>
 
       {/* System Requirements */}
