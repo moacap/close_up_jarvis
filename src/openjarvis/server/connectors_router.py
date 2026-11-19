@@ -159,12 +159,61 @@ def create_connectors_router():
         except Exception:
             pass
 
+        webhooks: list[Dict[str, str]] = []
+        if instance.is_connected():
+            cfg: Dict[str, Any] = {}
+            load_cfg = getattr(instance, "_load_config", None)
+            if callable(load_cfg):
+                try:
+                    loaded = load_cfg()
+                    if isinstance(loaded, dict):
+                        cfg = loaded
+                except Exception:
+                    cfg = {}
+            if connector_id == "coachingqi_visits":
+                webhooks.extend(
+                    [
+                        {
+                            "label": "Webhook de entrada",
+                            "method": "POST",
+                            "url": "/targetqi/visit-record",
+                        },
+                        {
+                            "label": "Webhook de entrada (v1)",
+                            "method": "POST",
+                            "url": "/api/v1/targetqi/visit-record",
+                        },
+                        {
+                            "label": "Ingestão direta",
+                            "method": "POST",
+                            "url": "/v1/connectors/coachingqi_visits/ingest",
+                        },
+                    ]
+                )
+                if cfg.get("url"):
+                    webhooks.append(
+                        {
+                            "label": "Webhook / API configurada",
+                            "method": "GET/POST",
+                            "url": str(cfg["url"]),
+                        }
+                    )
+            elif connector_id == "sales_farma" and cfg.get("url"):
+                webhooks.append(
+                    {
+                        "label": "Endpoint configurado",
+                        "method": "GET",
+                        "url": str(cfg["url"]),
+                    }
+                )
+
         return {
             "connector_id": connector_id,
             "display_name": getattr(instance, "display_name", connector_id),
             "auth_type": getattr(instance, "auth_type", "unknown"),
             "connected": instance.is_connected(),
             "chunks": chunks,
+            "webhooks": webhooks,
         }
 
     def _maybe_oauth_client_pair(

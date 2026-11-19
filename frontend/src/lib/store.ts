@@ -25,6 +25,7 @@ export interface CachedConnector {
   connected: boolean;
   chunks: number;
   auth_type: string;
+  webhooks?: Array<{ label: string; method: string; url: string }>;
 }
 
 export interface AgentEvent {

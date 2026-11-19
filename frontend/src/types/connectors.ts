@@ -32,6 +32,12 @@ export interface OAuthSetupInfo {
   has_credentials: boolean;
 }
 
+export interface ConnectorWebhook {
+  label: string;
+  method: string;
+  url: string;
+}
+
 export interface ConnectorInfo {
   connector_id: string;
   display_name: string;
@@ -41,6 +47,7 @@ export interface ConnectorInfo {
   mcp_tools?: string[];
   chunks?: number;
   oauth_setup?: OAuthSetupInfo | null;
+  webhooks?: ConnectorWebhook[];
 }
 
 export interface SyncStatus {

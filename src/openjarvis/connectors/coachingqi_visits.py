@@ -162,7 +162,7 @@ class CoachingQIVisitsConnector(BaseConnector):
     """Ingest and sync field visit records in the CoachingQI / TargetAI format."""
 
     connector_id = "coachingqi_visits"
-    display_name = "CoachingQI Visitas"
+    display_name = "TagetIQ"
     auth_type = "local"
 
     def __init__(self, *, config_path: str | None = None) -> None:

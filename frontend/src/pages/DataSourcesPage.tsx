@@ -19,7 +19,7 @@ import { getBase, isTauri, authHeaders } from '../lib/api';
 import {
   Database, MessageSquare, Loader2, Brain, Search, FolderOpen, FileText,
   Mail, Hash, MessageCircle, CalendarDays, Contact, StickyNote, BookText,
-  Package, Upload, Link2, PhoneCall,
+  Package, Upload, Link2, PhoneCall, HelpCircle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { SOURCE_CATALOG } from '../types/connectors';
@@ -284,7 +284,7 @@ function GenericConnectPanel({
             disabled={loading || disabled || !cleanUrl}
             style={{ width: '100%', padding: 8, background: loading || disabled || !cleanUrl ? 'var(--color-disabled-bg)' : 'var(--color-accent-purple)', color: 'var(--color-on-accent)', border: 'none', borderRadius: 6, fontSize: 12, cursor: loading || disabled || !cleanUrl ? 'default' : 'pointer' }}
           >
-            {loading ? 'Connecting...' : 'Connect CoachingQI Visitas'}
+            {loading ? 'Connecting...' : 'Connect TagetIQ'}
           </button>
         </div>
       );
@@ -919,6 +919,70 @@ export function SyncStatusDisplay({
   );
 }
 
+const CONNECTOR_CHAT_EXAMPLES: Record<string, string[]> = {
+  apple_calendar: [
+    'Quais reuniões tenho hoje no meu Apple Calendar?',
+    'Resuma meus compromissos desta semana.',
+  ],
+  apple_contacts: [
+    'Qual o telefone ou e-mail de João Silva nos meus contatos?',
+    'Liste os contatos da empresa Close-UP.',
+  ],
+  apple_notes: [
+    'Busque nas minhas notas do Apple Notes sobre projeto TargetQI.',
+    'Resuma minhas anotações recentes sobre reuniões.',
+  ],
+  coachingqi_visits: [
+    'Liste as visitas do TagetIQ e os próximos objetivos.',
+    'Registre uma visita no TagetIQ para o médico Dr. Fulano.',
+  ],
+  imessage: [
+    'Quais foram as últimas mensagens do iMessage hoje?',
+    'Busque mensagens no iMessage sobre o relatório.',
+  ],
+  news_rss: [
+    'Quais são as últimas notícias dos feeds RSS configurados?',
+    'Resuma as manchetes de hoje do News / RSS.',
+  ],
+  sales_farma: [
+    'Mostre os dados e indicadores do Sales Farma Propagandistas.',
+    'Gere uma tabela HTML com as visitas dos propagandistas no Sales Farma.',
+  ],
+  gmail: [
+    'Resuma meus e-mails não lidos do Gmail hoje.',
+    'Busque e-mails sobre proposta comercial no Gmail.',
+  ],
+  google_calendar: [
+    'Quais são meus eventos de hoje no Google Calendar?',
+    'Tenho horário livre amanhã à tarde?',
+  ],
+  google_drive: [
+    'Busque apresentações recentes no meu Google Drive.',
+    'Resuma o documento de planejamento no Google Drive.',
+  ],
+  slack: [
+    'Resuma as mensagens de hoje no canal #geral do Slack.',
+    'O que foi decidido no Slack sobre o lançamento?',
+  ],
+  github: [
+    'Quais pull requests estão abertos no GitHub?',
+    'Resuma os últimos commits do repositório.',
+  ],
+  notion: [
+    'Busque páginas no Notion sobre onboarding.',
+    'Resuma a página de metas do trimestre no Notion.',
+  ],
+};
+
+function getConnectorChatExamples(connectorId: string, displayName: string): string[] {
+  return (
+    CONNECTOR_CHAT_EXAMPLES[connectorId] ?? [
+      `Busque informações recentes em ${displayName}.`,
+      `Resuma os principais registros de ${displayName}.`,
+    ]
+  );
+}
+
 function DataSourcesSection() {
   const cachedConnectors = useAppStore((s) => s.cachedConnectors);
   const setCachedConnectors = useAppStore((s) => s.setCachedConnectors);
@@ -926,6 +990,7 @@ function DataSourcesSection() {
   const isFirstLoad = cachedConnectors === null;
   const [syncStatuses, setSyncStatuses] = useState<Record<string, SyncStatus>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [openHelpId, setOpenHelpId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [disconnectError, setDisconnectError] = useState<{ id: string; message: string } | null>(null);
@@ -953,6 +1018,7 @@ function DataSourcesSection() {
           connected: c.connected,
           chunks: (c as any).chunks || 0,
           auth_type: c.auth_type,
+          webhooks: c.webhooks ?? [],
         })),
       );
     } catch {
@@ -1199,8 +1265,24 @@ function DataSourcesSection() {
                   display: 'flex', alignItems: 'center', gap: 14,
                 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="font-semibold" style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>
-                      {meta?.display_name ?? c.display_name}
+                    <div className="flex items-center gap-1.5 font-semibold" style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>
+                      <span>{meta?.display_name ?? c.display_name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setOpenHelpId((prev) => (prev === c.connector_id ? null : c.connector_id))}
+                        title="Como pedir no chat"
+                        aria-label={`Como pedir no chat para ${meta?.display_name ?? c.display_name}`}
+                        className="p-0.5 rounded-full transition-colors cursor-pointer hover:opacity-80"
+                        style={{
+                          color: openHelpId === c.connector_id ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+                          background: 'transparent',
+                          border: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <HelpCircle size={14} />
+                      </button>
                     </div>
                     <SyncStatusDisplay
                       chunks={c.chunks}
@@ -1210,6 +1292,50 @@ function DataSourcesSection() {
                       disabled={connectorActionsBusy}
                       onSyncTriggered={loadConnectors}
                     />
+                    {c.webhooks && c.webhooks.length > 0 && (
+                      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                          Webhooks ativos:
+                        </span>
+                        {c.webhooks.map((wh, idx) => (
+                          <div
+                            key={`${wh.method}-${wh.url}-${idx}`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              flexWrap: 'wrap',
+                              fontSize: 11,
+                              color: 'var(--color-text-tertiary)',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontFamily: 'monospace',
+                                fontSize: 10,
+                                padding: '1px 5px',
+                                borderRadius: 3,
+                                background: 'var(--color-bg-secondary)',
+                                border: '1px solid var(--color-border)',
+                                color: 'var(--color-accent)',
+                              }}
+                            >
+                              {wh.method}
+                            </span>
+                            <span>{wh.label}:</span>
+                            <code
+                              style={{
+                                fontSize: 11,
+                                color: 'var(--color-text-secondary)',
+                                wordBreak: 'break-all',
+                              }}
+                            >
+                              {wh.url}
+                            </code>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {disconnectError?.id === c.connector_id && (
                       <div style={{ fontSize: 11, color: 'var(--color-error)', marginTop: 4 }}>
                         Disconnect failed: {disconnectError.message}
@@ -1270,6 +1396,25 @@ function DataSourcesSection() {
                       : sync?.state === 'stopping' ? 'Finish disconnect' : 'Disconnect'}
                   </button>
                 </div>
+                {openHelpId === c.connector_id && (
+                  <div
+                    style={{
+                      padding: '10px 18px 14px',
+                      borderTop: '1px solid var(--color-border)',
+                      background: 'var(--color-bg-secondary)',
+                      fontSize: 12,
+                    }}
+                  >
+                    <div className="font-medium mb-1.5" style={{ color: 'var(--color-text)' }}>
+                      Exemplos de como pedir no chat:
+                    </div>
+                    <ul className="space-y-1" style={{ color: 'var(--color-text-secondary)', margin: 0, paddingLeft: 16 }}>
+                      {getConnectorChatExamples(c.connector_id, meta?.display_name ?? c.display_name).map((example, idx) => (
+                        <li key={idx}>“{example}”</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {c.connector_id === 'sales_farma' && editingSalesFarma && (
                   <div style={{ padding: '0 18px 14px', borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
                     <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
@@ -1368,7 +1513,7 @@ function DataSourcesSection() {
                           await loadConnectors();
                           void loadSyncStatuses();
                         } catch (err: any) {
-                          setEditCoachingQiError(err?.message || 'Failed to update CoachingQI Visitas config');
+                          setEditCoachingQiError(err?.message || 'Failed to update TagetIQ config');
                         } finally {
                           setLoading(false);
                         }
@@ -1463,8 +1608,27 @@ function DataSourcesSection() {
                   onClick={() => setExpandedId(isExpanded ? null : c.connector_id)}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="font-semibold" style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>
-                      {meta?.display_name ?? c.display_name}
+                    <div className="flex items-center gap-1.5 font-semibold" style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)' }}>
+                      <span>{meta?.display_name ?? c.display_name}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenHelpId((prev) => (prev === c.connector_id ? null : c.connector_id));
+                        }}
+                        title="Como pedir no chat"
+                        aria-label={`Como pedir no chat para ${meta?.display_name ?? c.display_name}`}
+                        className="p-0.5 rounded-full transition-colors cursor-pointer hover:opacity-80"
+                        style={{
+                          color: openHelpId === c.connector_id ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+                          background: 'transparent',
+                          border: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <HelpCircle size={14} />
+                      </button>
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
                       {meta?.description ?? 'Not connected'}
@@ -1474,6 +1638,26 @@ function DataSourcesSection() {
                     {isExpanded ? '× Close' : '+ Add'}
                   </span>
                 </div>
+
+                {openHelpId === c.connector_id && (
+                  <div
+                    style={{
+                      padding: '10px 14px 12px',
+                      borderTop: '1px solid var(--color-border)',
+                      background: 'var(--color-bg-secondary)',
+                      fontSize: 12,
+                    }}
+                  >
+                    <div className="font-medium mb-1.5" style={{ color: 'var(--color-text)' }}>
+                      Exemplos de como pedir no chat:
+                    </div>
+                    <ul className="space-y-1" style={{ color: 'var(--color-text-secondary)', margin: 0, paddingLeft: 16 }}>
+                      {getConnectorChatExamples(c.connector_id, meta?.display_name ?? c.display_name).map((example, idx) => (
+                        <li key={idx}>“{example}”</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {isExpanded && c.connector_id === 'upload' && (
                   <div style={{ borderTop: '1px solid var(--color-border)', padding: 12 }}>
