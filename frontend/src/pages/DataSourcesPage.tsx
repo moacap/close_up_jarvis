@@ -1130,8 +1130,10 @@ function DataSourcesSection() {
     return connectors.filter((c) => c.connector_id !== 'gmail');
   })();
 
-  const connected = unifiedConnectors.filter((c) => c.connected);
-  const notConnectedBase = unifiedConnectors.filter((c) => !c.connected);
+  const HIDDEN_CONNECTORS = new Set(['apple_music', 'spotify', 'oura', 'strava']);
+  const visibleConnectors = unifiedConnectors.filter((c) => !HIDDEN_CONNECTORS.has(c.connector_id));
+  const connected = visibleConnectors.filter((c) => c.connected);
+  const notConnectedBase = visibleConnectors.filter((c) => !c.connected);
   // Always show the upload card in the not-connected list (it has no backend connector)
   const uploadEntry = { connector_id: 'upload', display_name: 'Upload / Paste', connected: false, chunks: 0, auth_type: 'local' };
   const notConnected = notConnectedBase.some((c) => c.connector_id === 'upload')
