@@ -181,15 +181,17 @@ export function InputArea() {
     resetStream();
   }, [resetStream]);
 
-  const sendMessage = useCallback(async () => {
-    const content = input.trim();
+  const sendPromptText = useCallback(async (rawText: string, clearInput = false) => {
+    const content = rawText.trim();
     if (!content || streamState.isStreaming) return;
     if (!selectedModel) {
       toast.error(t('chat.inputArea.pickModelFirst'));
       return;
     }
 
-    setInput('');
+    if (clearInput) {
+      setInput('');
+    }
 
     let convId = activeId;
     if (!convId) {
@@ -555,7 +557,6 @@ export function InputArea() {
       }
     }
   }, [
-    input,
     activeId,
     selectedModel,
     streamState.isStreaming,
@@ -568,6 +569,21 @@ export function InputArea() {
     temperature,
     maxTokens,
   ]);
+
+  const sendMessage = useCallback(() => {
+    void sendPromptText(input, true);
+  }, [sendPromptText, input]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (typeof detail === 'string' && detail.trim()) {
+        void sendPromptText(detail, false);
+      }
+    };
+    window.addEventListener('closeup:rerun-prompt', handler);
+    return () => window.removeEventListener('closeup:rerun-prompt', handler);
+  }, [sendPromptText]);
 
   const scriptMatch = input.match(/(?:^|\s)@([A-Za-z0-9_-]*)$/);
   const isScriptTyping = Boolean(scriptMatch) && !input.includes('\n') && !slashDismissed;

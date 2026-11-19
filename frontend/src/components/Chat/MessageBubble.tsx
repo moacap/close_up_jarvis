@@ -6,7 +6,7 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import 'katex/dist/katex.min.css';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AudioPlayer } from './AudioPlayer';
 import { ToolCallCard } from './ToolCallCard';
@@ -136,7 +136,21 @@ export function MessageBubble({ message, isLive = false }: Props) {
 
   if (isUser) {
     return (
-      <div className="flex justify-end mb-4">
+      <div className="group flex justify-end items-center gap-1.5 mb-4">
+        <button
+          type="button"
+          onClick={() => {
+            window.dispatchEvent(
+              new CustomEvent('closeup:rerun-prompt', { detail: message.content }),
+            );
+          }}
+          title="Executar novamente"
+          aria-label="Executar novamente"
+          className="p-1.5 rounded-full opacity-50 group-hover:opacity-100 transition-opacity cursor-pointer"
+          style={{ color: 'var(--color-text-tertiary)' }}
+        >
+          <RotateCcw size={13} />
+        </button>
         <div
           dir="auto"
           className="max-w-[85%] px-4 py-2.5 text-sm leading-relaxed"
