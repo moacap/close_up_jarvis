@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { EnergyDashboard } from '../components/Dashboard/EnergyDashboard';
-import { CostComparison } from '../components/Dashboard/CostComparison';
 import { TraceDebugger } from '../components/Dashboard/TraceDebugger';
 
 export function DashboardPage() {
@@ -25,9 +24,8 @@ export function DashboardPage() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div className="mb-4">
           <EnergyDashboard />
-          <CostComparison />
         </div>
 
         <TraceDebugger />

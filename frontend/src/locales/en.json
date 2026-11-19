@@ -955,6 +955,34 @@
     }
   },
   "pages": {
+    "dashboard": {
+      "systemOverview": "System Overview",
+      "description": "Energy monitoring, inference metrics, and trace debugging."
+    },
+    "dataSources": {
+      "title": "Data Sources, Channels & Memory",
+      "description": "Connect personal data so the assistant can search across everything, and set up messaging channels to chat from your phone.",
+      "tabs": {
+        "sources": "Data Sources",
+        "messaging": "Messaging Channels",
+        "memory": "Memory"
+      },
+      "connected": "Connected",
+      "available": "Available",
+      "disconnect": "Disconnect",
+      "disconnecting": "Disconnecting…",
+      "cleaningUp": "Cleaning up…",
+      "finishDisconnect": "Finish disconnect",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "syncNow": "Sync Now",
+      "resync": "Re-sync",
+      "syncing": "Syncing...",
+      "add": "+ Add",
+      "close": "× Close",
+      "notConnected": "Not connected",
+      "connectedNotSynced": "Connected — not synced yet"
+    },
     "logs": {
       "title": "Logs",
       "entriesCount": "{{count}} entries",

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { useAppStore } from '../lib/store';
 import {
@@ -745,6 +746,7 @@ export function SyncStatusDisplay({
   disabled?: boolean;
   onSyncTriggered: () => void;
 }) {
+  const { t } = useTranslation();
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState('');
 
@@ -891,7 +893,7 @@ export function SyncStatusDisplay({
         <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
           {hasSynced
             ? `Synced — 0 ${unitLabel} found`
-            : 'Connected — not synced yet'}
+            : t('pages.dataSources.connectedNotSynced')}
         </span>
         <button
           onClick={handleSync}
@@ -903,7 +905,7 @@ export function SyncStatusDisplay({
             cursor: syncing || disabled ? 'default' : 'pointer', fontWeight: 600,
             opacity: syncing || disabled ? 0.5 : 1,
           }}
-        >{syncing ? 'Syncing...' : hasSynced ? 'Re-sync' : 'Sync Now'}</button>
+        >{syncing ? t('pages.dataSources.syncing') : hasSynced ? t('pages.dataSources.resync') : t('pages.dataSources.syncNow')}</button>
       </div>
       {hasSynced && connectorId === 'slack' && (
         <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
@@ -984,6 +986,7 @@ function getConnectorChatExamples(connectorId: string, displayName: string): str
 }
 
 function DataSourcesSection() {
+  const { t } = useTranslation();
   const cachedConnectors = useAppStore((s) => s.cachedConnectors);
   const setCachedConnectors = useAppStore((s) => s.setCachedConnectors);
   const connectors = cachedConnectors ?? [];
@@ -1242,7 +1245,7 @@ function DataSourcesSection() {
         <section>
           <div className="hud-label mb-2 flex items-center gap-2">
             <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 999, background: 'var(--color-success)' }} />
-            Connected · {connected.length}
+            {t('pages.dataSources.connected')} · {connected.length}
           </div>
           <div className="flex flex-col gap-2">
           {connected.map((c) => {
@@ -1373,7 +1376,7 @@ function DataSourcesSection() {
                         ? editingSalesFarma
                         : c.connector_id === 'coachingqi_visits'
                         ? editingCoachingQi
-                        : editingNewsRss) ? 'Cancel' : 'Edit'}
+                        : editingNewsRss) ? t('pages.dataSources.cancel') : t('pages.dataSources.edit')}
                     </button>
                   )}
                   <button
@@ -1392,8 +1395,8 @@ function DataSourcesSection() {
                     }}
                   >
                     {disconnectingId === c.connector_id
-                      ? sync?.state === 'stopping' ? 'Cleaning up…' : 'Disconnecting…'
-                      : sync?.state === 'stopping' ? 'Finish disconnect' : 'Disconnect'}
+                      ? sync?.state === 'stopping' ? t('pages.dataSources.cleaningUp') : t('pages.dataSources.disconnecting')
+                      : sync?.state === 'stopping' ? t('pages.dataSources.finishDisconnect') : t('pages.dataSources.disconnect')}
                   </button>
                 </div>
                 {openHelpId === c.connector_id && (
@@ -1582,7 +1585,7 @@ function DataSourcesSection() {
         <section>
           <div className="hud-label mb-2 flex items-center gap-2">
             <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 999, background: 'var(--color-text-tertiary)' }} />
-            Available · {notConnected.length}
+            {t('pages.dataSources.available')} · {notConnected.length}
           </div>
           <div className="grid grid-cols-2 gap-2">
           {notConnected.map((c) => {
@@ -1631,11 +1634,11 @@ function DataSourcesSection() {
                       </button>
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                      {meta?.description ?? 'Not connected'}
+                      {meta?.description ?? t('pages.dataSources.notConnected')}
                     </div>
                   </div>
                   <span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 500 }}>
-                    {isExpanded ? '× Close' : '+ Add'}
+                    {isExpanded ? t('pages.dataSources.close') : t('pages.dataSources.add')}
                   </span>
                 </div>
 
@@ -2765,6 +2768,7 @@ function MemorySection() {
 // ---------------------------------------------------------------------------
 
 export function DataSourcesPage() {
+  const { t } = useTranslation();
   const [agents, setAgents] = useState<ManagedAgent[]>([]);
   const [activeTab, setActiveTab] = useState<'sources' | 'messaging' | 'memory'>('sources');
   const [creatingAgent, setCreatingAgent] = useState(false);
@@ -2804,9 +2808,9 @@ export function DataSourcesPage() {
   }, [activeTab, firstAgent, creatingAgent, ensureAgent]);
 
   const tabs = [
-    { id: 'sources' as const, label: 'Data Sources', icon: Database },
-    { id: 'messaging' as const, label: 'Messaging Channels', icon: MessageSquare },
-    { id: 'memory' as const, label: 'Memory', icon: Brain },
+    { id: 'sources' as const, label: t('pages.dataSources.tabs.sources'), icon: Database },
+    { id: 'messaging' as const, label: t('pages.dataSources.tabs.messaging'), icon: MessageSquare },
+    { id: 'memory' as const, label: t('pages.dataSources.tabs.memory'), icon: Brain },
   ];
 
   return (
@@ -2814,10 +2818,10 @@ export function DataSourcesPage() {
       <div className="max-w-5xl mx-auto">
       <header className="mb-6">
         <h1 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-          Data Sources, Channels &amp; Memory
+          {t('pages.dataSources.title')}
         </h1>
         <p className="text-sm mt-2 max-w-2xl" style={{ color: 'var(--color-text-secondary)' }}>
-          Connect personal data so the assistant can search across everything, and set up messaging channels to chat from your phone.
+          {t('pages.dataSources.description')}
         </p>
       </header>
 

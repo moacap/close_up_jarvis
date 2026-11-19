@@ -955,6 +955,34 @@
     }
   },
   "pages": {
+    "dashboard": {
+      "systemOverview": "Resumen del Sistema",
+      "description": "Monitoreo de energía, métricas de inferencia y depuración de trazas."
+    },
+    "dataSources": {
+      "title": "Fuentes de Datos, Canales y Memoria",
+      "description": "Conecta datos personales para que el asistente pueda buscar en todo y configura canales de mensajería para chatear desde tu teléfono.",
+      "tabs": {
+        "sources": "Fuentes de Datos",
+        "messaging": "Canales de Mensajería",
+        "memory": "Memoria"
+      },
+      "connected": "Conectados",
+      "available": "Disponibles",
+      "disconnect": "Desconectar",
+      "disconnecting": "Desconectando…",
+      "cleaningUp": "Limpiando…",
+      "finishDisconnect": "Finalizar desconexión",
+      "edit": "Editar",
+      "cancel": "Cancelar",
+      "syncNow": "Sincronizar",
+      "resync": "Re-sincronizar",
+      "syncing": "Sincronizando...",
+      "add": "+ Agregar",
+      "close": "× Cerrar",
+      "notConnected": "No conectado",
+      "connectedNotSynced": "Conectado — aún no sincronizado"
+    },
     "logs": {
       "title": "Registros",
       "entriesCount": "{{count}} entradas",
